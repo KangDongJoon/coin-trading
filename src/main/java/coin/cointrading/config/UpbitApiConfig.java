@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
-public class UpBitApiConfig {
+public class UpbitApiConfig {
     @Bean
     public RestTemplate getRestTemplate() {
         RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
