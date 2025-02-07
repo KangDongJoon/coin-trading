@@ -23,7 +23,7 @@ public class TradingController {
         return ResponseEntity.ok(tradingService.getAccount());
     }
 
-    @GetMapping("/v1/ai-decision")
+    @GetMapping("/v1/ai-decisions")
     @Operation(summary = "AI 투자 판단", description = "AI 투자 판단")
     public ResponseEntity<String> aiDecision() throws IOException {
         return ResponseEntity.ok(tradingService.aiDecision());

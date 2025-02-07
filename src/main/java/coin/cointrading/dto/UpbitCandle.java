@@ -27,6 +27,18 @@ public class UpbitCandle {
     @JsonProperty("trade_price")
     private double tradePrice;
 
+    @JsonProperty("prev_closing_price")
+    private double prevClosingPrice;
+
+    @JsonProperty("change_price")
+    private double changePrice;
+
+    @JsonProperty("change_rate")
+    private double changeRate;
+
+    @JsonProperty("converted_trade_price")
+    private double convertedTradePrice;
+
     private long timestamp;
 
     @JsonProperty("candle_acc_trade_price")
