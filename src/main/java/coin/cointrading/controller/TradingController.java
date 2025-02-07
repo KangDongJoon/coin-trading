@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
@@ -30,6 +31,12 @@ public class TradingController {
     @Operation(summary = "주문하기", description = "화폐 주문")
     public ResponseEntity<OrderResponse> orderCoin() throws UnsupportedEncodingException, NoSuchAlgorithmException {
         return ResponseEntity.ok(tradingService.orderCoin());
+    }
+
+    @GetMapping("/v1/ai-decisions")
+    @Operation(summary = "AI 투자 판단", description = "AI 투자 판단")
+    public ResponseEntity<String> aiDecision() throws IOException {
+        return ResponseEntity.ok(tradingService.aiDecision());
     }
 
 }
