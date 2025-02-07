@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
@@ -29,7 +28,7 @@ public class TradingController {
 
     @PostMapping("/v1/orders")
     @Operation(summary = "주문하기", description = "화폐 주문")
-    public ResponseEntity<OrderResponse> orderCoin() throws UnsupportedEncodingException, NoSuchAlgorithmException {
+    public ResponseEntity<OrderResponse> orderCoin() throws IOException, NoSuchAlgorithmException {
         return ResponseEntity.ok(tradingService.orderCoin());
     }
 

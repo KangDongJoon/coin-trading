@@ -1,9 +1,9 @@
 package coin.cointrading.service;
 
 import coin.cointrading.dto.AccountResponse;
+import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.dto.SimpleCandleDTO;
 import coin.cointrading.dto.UpbitCandle;
-import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.util.JwtTokenProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,11 +21,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.UnsupportedEncodingException;
-import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 @Service
@@ -53,11 +52,33 @@ public class TradingService {
                 }).getBody();
     }
 
-    public OrderResponse orderCoin() throws UnsupportedEncodingException, NoSuchAlgorithmException {
-        // 계좌 및 gpt와 연동하여 결정
-        String side = "";
-        String price = "";
-        String volume = "";
+    public OrderResponse orderCoin() throws IOException, NoSuchAlgorithmException {
+        List<AccountResponse> account = getAccount();
+
+        AccountResponse KRW = new AccountResponse();
+        AccountResponse ETH = new AccountResponse();
+
+        for (AccountResponse accountResponse : account) {
+            if (accountResponse.getCurrency().equals("KRW")) KRW = accountResponse;
+            else if (accountResponse.getCurrency().equals("ETH")) ETH = accountResponse;
+        }
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = objectMapper.readTree(aiDecision());
+
+        String decision = jsonNode.path("decision").asText();
+        String side;
+        if (decision.equals("buy")) {
+            side = "bid";
+        } else if (decision.equals("sell")) {
+            side = "ask";
+        } else {
+            return null;
+        }
+
+        double balance = Math.floor(Double.parseDouble(KRW.getBalance()) * 0.9995);
+        String price = Double.toString(balance);
+        String volume = ETH.getBalance();
         String ord_type = side.equals("bid") ? "price" : "market";
 
         HashMap<String, String> params = new HashMap<>();
@@ -65,9 +86,9 @@ public class TradingService {
         params.put("side", side);
         params.put("ord_type", ord_type);
 
-        if(side.equals("bid")){
+        if (side.equals("bid")) {
             params.put("price", price);
-        }else{
+        } else {
             params.put("volume", volume);
         }
 
@@ -84,6 +105,7 @@ public class TradingService {
                 new ParameterizedTypeReference<OrderResponse>() {
                 }).getBody();
     }
+
     public String aiDecision() throws IOException {
         final String gptUrl = "https://api.openai.com/v1/chat/completions";
 
