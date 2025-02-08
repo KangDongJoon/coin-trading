@@ -50,9 +50,6 @@ public class JwtTokenProvider {
                 .withClaim("query_hash_alg", "SHA512")
                 .sign(algorithm);
 
-        String token = "Bearer " + jwtToken;
-        System.out.println(token);
-
-        return token;
+        return "Bearer " + jwtToken;
     }
 }
