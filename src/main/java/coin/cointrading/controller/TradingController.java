@@ -38,6 +38,11 @@ public class TradingController {
         return ResponseEntity.ok(tradingService.aiDecision());
     }
 
+    @PostMapping("/v2/starts")
+    public void startProgram() throws IOException, InterruptedException, NoSuchAlgorithmException {
+        tradingService.startProgram();
+    }
+
 }
 
 
