@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -32,8 +31,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TradingService {
 
-    @Value("${openai.api.key}")
-    private String openAiKey;
+    //    @Value("${openai.api.key}")
+//    private String openAiKey;
     private final String serverUrl = "https://api.upbit.com";
     private final JwtTokenProvider jwtTokenProvider;
     private final RestTemplate restTemplate;
@@ -57,6 +56,7 @@ public class TradingService {
         double todayTarget = checkTarget(); // 당일 목표가
         boolean op_mode = false; // 시작하는 날 매수하지않기
         boolean hold = false; // 이미 매수한 상태라면 매수시도 하지않기(true = 매수, false = 매도)
+        boolean stopLossExecuted = false; // 손절 여부 추적
 
         while (true) {
             LocalTime now = LocalTime.now(); // 현재시간
@@ -65,16 +65,18 @@ public class TradingService {
             if (now.getHour() == 9 && now.getMinute() == 0 && (20 < now.getSecond() && 30 > now.getSecond())) {
                 todayTarget = checkTarget(); // 목표가 갱신
                 op_mode = true;
+                stopLossExecuted = false;
             }
 
             // 매수 로직
-            if(op_mode && !hold && current >= todayTarget){
+            if (op_mode && !hold && current >= todayTarget) {
                 // 매수 api
                 orderCoins("buy");
                 hold = true;
             }
+
             // 매도 로직
-            if(op_mode && hold && now.getHour() == 8 && now.getMinute() == 59 && (50 <= now.getSecond() && 59 >= now.getSecond())){
+            if (op_mode && hold && now.getHour() == 8 && now.getMinute() == 59 && (50 <= now.getSecond() && 59 >= now.getSecond())) {
                 // 매도 api
                 orderCoins("sell");
                 hold = false;
@@ -82,7 +84,16 @@ public class TradingService {
                 Thread.sleep(10000);
             }
 
-            Thread.sleep(1000);
+            // 손절 5%
+            if(op_mode && hold && current < todayTarget * 0.95){
+                // 매도 api
+                orderCoins("sell");
+                hold = false;
+                op_mode = false;
+                stopLossExecuted = true;
+            }
+
+            Thread.sleep(1000); // 특정시간마다 하게
 
 //            System.out.printf("현재시간: %s 목표가: %s 현재가: %s 보유상태: %s 동작상태: %s%n",
 //                    now, todayTarget, current, hold, op_mode);
@@ -100,6 +111,7 @@ public class TradingService {
             else if (accountResponse.getCurrency().equals("ETH")) ETH = accountResponse;
         }
 
+        // enum
         String side;
         if (decision.equals("buy")) {
             side = "bid";

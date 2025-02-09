@@ -27,6 +27,7 @@ public class TradingController {
     }
 
     @PostMapping("/v1/starts")
+    @Operation(summary = "프로그램실행", description = "프로그램실행")
     public void startProgram() throws IOException, InterruptedException, NoSuchAlgorithmException {
         tradingService.startProgram();
     }
