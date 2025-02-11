@@ -31,6 +31,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+    // Thymeleaf 템플릿 엔진 의존성
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
     // https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient
     implementation group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.14'
 
