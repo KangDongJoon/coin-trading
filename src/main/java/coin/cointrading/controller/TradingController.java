@@ -1,7 +1,6 @@
 package coin.cointrading.controller;
 
 import coin.cointrading.dto.AccountResponse;
-import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.service.TradingService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -31,18 +30,6 @@ public class TradingController {
     public void startProgram() throws IOException, InterruptedException, NoSuchAlgorithmException {
         tradingService.startProgram();
     }
-
-//    @PostMapping("/v1/orders")
-//    @Operation(summary = "주문하기", description = "화폐 주문")
-//    public ResponseEntity<OrderResponse> orderCoin() throws IOException, NoSuchAlgorithmException {
-//        return ResponseEntity.ok(tradingService.orderCoin());
-//    }
-//
-//    @GetMapping("/v1/ai-decisions")
-//    @Operation(summary = "AI 투자 판단", description = "AI 투자 판단")
-//    public ResponseEntity<String> aiDecision() throws IOException {
-//        return ResponseEntity.ok(tradingService.aiDecision());
-//    }
 }
 
 
