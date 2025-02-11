@@ -6,10 +6,16 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class UserController {
 
+    // 로그인 페이지로 이동
+    @GetMapping("/auth/login")
+    public String showLoginPage() {
+        return "login";
+    }
+
     // 회원가입 페이지로 이동
-    @GetMapping("/register")
+    @GetMapping("/auth/register")
     public String showRegisterPage() {
-        return "register";  // register.html을 렌더링
+        return "register";
     }
 
 }
