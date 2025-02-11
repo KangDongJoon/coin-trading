@@ -61,15 +61,15 @@
 
 <div class="container">
   <h2>회원가입</h2>
-  <form action="/register" method="post">
-    <input type="text" name="userId" placeholder="아이디" required>
-    <input type="text" name="userNickname" placeholder="닉네임" required>
-    <input type="password" name="password" placeholder="비밀번호" required>
-    <input type="text" name="accessKey" placeholder="Access Key" required>
-    <input type="text" name="secretKey" placeholder="Secret Key" required>
+  <form action="/auth/signup" method="post">
+    <input type="text" name="userId" placeholder="아이디" required />
+    <input type="password" name="password" placeholder="비밀번호" required />
+    <input type="text" name="userNickname" placeholder="닉네임" required />
+    <input type="text" name="secretKey" placeholder="Secret Key" required />
+    <input type="text" name="accessKey" placeholder="Access Key" required />
     <button type="submit" class="button">회원가입</button>
   </form>
-  <a href="/" class="back-link">로그인 페이지로 돌아가기</a>
+  <a href="/auth/login" class="back-link">로그인 페이지로 돌아가기</a>
 </div>
 
 </body>
