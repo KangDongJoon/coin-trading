@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.gson.Gson;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import okhttp3.*;
 import okhttp3.MediaType;
@@ -149,7 +148,6 @@ public class GptService {
         }
     }
 
-    @NotNull
     private static String candleExtract() throws IOException {
         // 업비트 차트 전달 15일치 일봉데이터 가져오기
         OkHttpClient client = new OkHttpClient();

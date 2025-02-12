@@ -34,6 +34,7 @@ public class TradingService {
     private final String serverUrl = "https://api.upbit.com";
     private final JwtTokenProvider jwtTokenProvider;
     private final RestTemplate restTemplate;
+    private boolean running;
 
     public List<AccountResponse> getAccount() {
         String accountUrl = serverUrl + "/v1/accounts";
@@ -51,12 +52,13 @@ public class TradingService {
     }
 
     public void startProgram() throws IOException, InterruptedException, NoSuchAlgorithmException {
+        running = true;
         double todayTarget = checkTarget(); // 당일 목표가
         boolean op_mode = false; // 시작하는 날 매수하지않기
         boolean hold = false; // 이미 매수한 상태라면 매수시도 하지않기(true = 매수, false = 매도)
         boolean stopLossExecuted = false; // 손절 여부 추적
 
-        while (true) {
+        while (running) {
             LocalTime now = LocalTime.now(); // 현재시간
             double current = current(); // 현재가
             // 목표가 지정 9시 00분 20 ~ 30초 사이
@@ -93,9 +95,14 @@ public class TradingService {
 
             Thread.sleep(1000); // 특정시간마다 하게
 
-//            System.out.printf("현재시간: %s 목표가: %s 현재가: %s 보유상태: %s 동작상태: %s%n",
-//                    now, todayTarget, current, hold, op_mode);
+            System.out.printf("현재시간: %s 목표가: %s 현재가: %s 보유상태: %s 동작상태: %s%n",
+                    now, todayTarget, current, hold, op_mode);
         }
+        System.out.println("프로그램 종료");
+    }
+
+    public void stopProgram() {
+        running = false;
     }
 
     private OrderResponse orderCoins(String decision) throws IOException, NoSuchAlgorithmException {
