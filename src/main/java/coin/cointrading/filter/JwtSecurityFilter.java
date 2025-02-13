@@ -7,6 +7,7 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
@@ -32,21 +33,21 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse httpResponse,
             @NonNull FilterChain chain
     ) throws ServletException, IOException {
-        String authorizationHeader = httpRequest.getHeader("Authorization");
+        String jwt = resolveToken(httpRequest); // ✅ 여기서 JWT 가져오기
 
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            String jwt = jwtTokenProvider.substringToken(authorizationHeader);
+        if (jwt != null) {
             try {
-                DecodedJWT decodedJWT = jwtTokenProvider.extractClaims(jwt);  // DecodedJWT로 반환받기
-                Long userId = Long.valueOf(decodedJWT.getSubject());  // userId는 subject로 반환됨
+                DecodedJWT decodedJWT = jwtTokenProvider.extractClaims(jwt);  // JWT 검증 및 파싱
+                Long userId = Long.valueOf(decodedJWT.getSubject());
 
                 if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    String userNickname = decodedJWT.getClaim("nickName").asString();  // "name" 클레임
+                    String userNickname = decodedJWT.getClaim("userNickname").asString();
 
                     AuthUser authUser = new AuthUser(userId, userNickname);
 
                     JwtAuthenticationToken authenticationToken = new JwtAuthenticationToken(authUser);
                     authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(httpRequest));
+
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                 } else {
                     log.error("JWT 파싱 실패: userId가 null이거나 SecurityContext에 이미 인증 정보가 설정됨");
@@ -55,12 +56,28 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
             } catch (JWTVerificationException e) {
                 log.error("Invalid JWT token", e);
                 httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "유효하지 않은 JWT 서명입니다.");
+                return;
             } catch (Exception e) {
                 log.error("Internal server error", e);
                 httpResponse.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                return;
             }
         }
         chain.doFilter(httpRequest, httpResponse);
     }
+
+    // 쿠키에서 JWT 토큰을 추출
+    private String resolveToken(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("Authorization".equals(cookie.getName())) {
+                    return cookie.getValue();  // Authorization 쿠키에서 토큰 추출
+                }
+            }
+        }
+        return null;
+    }
 }
+
 

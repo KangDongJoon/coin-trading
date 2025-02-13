@@ -12,6 +12,7 @@
             margin: 0;
             padding: 0;
         }
+
         .container {
             width: 350px;
             margin: 80px auto;
@@ -20,9 +21,11 @@
             border-radius: 10px;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         }
+
         h2 {
             margin-bottom: 20px;
         }
+
         input {
             width: 90%;
             padding: 10px;
@@ -31,12 +34,14 @@
             border-radius: 5px;
             font-size: 14px;
         }
+
         .button-container {
             display: flex;
-            flex-direction: column;  /* 버튼 세로 배치 */
+            flex-direction: column; /* 버튼 세로 배치 */
             gap: 15px;
             margin-top: 20px;
         }
+
         .button {
             padding: 10px;
             font-size: 16px;
@@ -46,15 +51,19 @@
             border-radius: 5px;
             cursor: pointer;
         }
+
         .button:hover {
             background-color: #218838;
         }
+
         .button-guide {
             background-color: #007bff;
         }
+
         .button-guide:hover {
             background-color: #0056b3;
         }
+
         .back-link {
             display: block;
             margin-top: 15px;
@@ -62,19 +71,18 @@
             color: #007bff;
             text-decoration: none;
         }
+
         .back-link:hover {
             text-decoration: underline;
         }
     </style>
 </head>
 <body>
-
 <div class="container">
     <h2>로그인</h2>
-    <form action="/login" method="post">
-        <input type="text" name="username" placeholder="아이디" required>
-        <input type="password" name="password" placeholder="비밀번호" required>
-
+    <form id="loginForm">
+        <input type="text" id="userId" name="userId" placeholder="아이디" required>
+        <input type="password" id="password" name="password" placeholder="비밀번호" required>
         <div class="button-container">
             <button type="submit" class="button">로그인</button>
             <a href="/auth/signup" class="button">회원가입</a>
@@ -82,6 +90,31 @@
         </div>
     </form>
 </div>
+
+<script>
+    document.getElementById("loginForm").addEventListener("submit", async function (event) {
+        event.preventDefault(); // 기본 제출 방지
+
+        const userId = document.getElementById("userId").value;
+        const password = document.getElementById("password").value;
+
+        try {
+            const response = await fetch("/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId, password }),
+                credentials: "include"  // ✅ 쿠키를 자동으로 포함하도록 설정
+            });
+
+            if (response.ok) {
+                window.location.href = "/home";  // JWT가 자동으로 포함된 상태로 요청됨
+            }
+        } catch (error) {
+            console.error("로그인 요청 실패", error);
+            alert("로그인 중 오류가 발생했습니다.");
+        }
+    });
+</script>
 
 </body>
 </html>

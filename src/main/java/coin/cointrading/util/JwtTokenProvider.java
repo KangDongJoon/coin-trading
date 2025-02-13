@@ -32,12 +32,12 @@ public class JwtTokenProvider {
 
         String jwtToken = JWT.create()
                 .withSubject(String.valueOf(userId))  // userId를 subject로 설정
-                .withClaim("userNickname", userNickname)  // username을 claim으로 추가
+                .withClaim("userNickname", userNickname)  // nickname을 claim으로 추가
                 .withIssuedAt(date)  // 발급일
                 .withExpiresAt(new Date(date.getTime() + 3600000))  // 만료일: 1시간
                 .sign(algorithm);  // 서명
 
-        return "Bearer " + jwtToken;
+        return jwtToken;
     }
 
     public String createAccountToken() {
@@ -83,10 +83,16 @@ public class JwtTokenProvider {
 
     public DecodedJWT extractClaims(String token) {
         try {
-            Algorithm algorithm = Algorithm.HMAC256(secretKey);
+            if (token == null || token.isBlank()) {
+                throw new RuntimeException("토큰이 없습니다.");
+            }
+
+            // "Bearer " 접두어가 있으면 제거
+            String jwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+            Algorithm algorithm = Algorithm.HMAC256(jwtSecretKey);
             JWTVerifier verifier = JWT.require(algorithm).build();
-            DecodedJWT jwt = verifier.verify(token.replace("Bearer ", ""));
-            return jwt;  // 전체 JWT 반환 (클레임은 getClaim 메서드를 통해 추출 가능)
+            return verifier.verify(jwt);
         } catch (JWTVerificationException exception) {
             throw new RuntimeException("JWT 토큰 검증 실패", exception);
         }
