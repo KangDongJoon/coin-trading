@@ -1,9 +1,11 @@
 package coin.cointrading.service;
 
+import coin.cointrading.domain.AuthUser;
 import coin.cointrading.dto.AccountResponse;
 import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.dto.SimpleCandleDTO;
 import coin.cointrading.dto.UpbitCandle;
+import coin.cointrading.util.AES256Util;
 import coin.cointrading.util.JwtTokenProvider;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -22,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -36,13 +37,14 @@ public class TradingService {
     private final String serverUrl = "https://api.upbit.com";
     private final JwtTokenProvider jwtTokenProvider;
     private final RestTemplate restTemplate;
+    private final AES256Util aes256Util;
     private boolean running;
 
-    public List<AccountResponse> getAccount() {
+    public List<AccountResponse> getAccount(AuthUser authUser) throws Exception {
         String accountUrl = serverUrl + "/v1/accounts";
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/json");
-        headers.set("Authorization", jwtTokenProvider.createAccountToken());
+        headers.set("Authorization", jwtTokenProvider.createAccountToken(authUser));
         HttpEntity<?> entity = new HttpEntity<>(headers);
 
         return restTemplate.exchange(
@@ -53,7 +55,7 @@ public class TradingService {
                 }).getBody();
     }
 
-    public void startProgram() throws IOException, InterruptedException, NoSuchAlgorithmException {
+    public void startProgram(AuthUser authUser) throws Exception {
         log.info("프로그램 동작 시작");
         running = true;
         double todayTarget = checkTarget(); // 당일 목표가
@@ -82,7 +84,7 @@ public class TradingService {
             // 매수 로직
             if (op_mode && !hold && current >= todayTarget && !stopLossExecuted) {
                 // 매수 api
-                OrderResponse orderResponse = orderCoins("buy");
+                OrderResponse orderResponse = orderCoins("buy", authUser);
                 hold = true;
                 log.info("매수 수량: {}", orderResponse.getVolume());
             }
@@ -91,7 +93,7 @@ public class TradingService {
             if (op_mode && hold && now.getHour() == 8 && now.getMinute() == 59 && (now.getSecond() >= 50 && now.getSecond() <= 59)) {
                 try {
                     // 매도 api
-                    OrderResponse orderResponse = orderCoins("sell");
+                    OrderResponse orderResponse = orderCoins("sell", authUser);
                     hold = false;
                     op_mode = false;
                     double ror = ((Integer.parseInt(orderResponse.getPrice()) - todayTarget) / todayTarget) * 100;
@@ -108,7 +110,7 @@ public class TradingService {
             // 손절 5%
             if (op_mode && hold && current < todayTarget * 0.95) {
                 // 매도 api
-                orderCoins("sell");
+                orderCoins("sell", authUser);
                 log.info("손절 발생");
                 hold = false;
                 op_mode = false;
@@ -129,8 +131,8 @@ public class TradingService {
         log.info("프로그램 종료");
     }
 
-    private OrderResponse orderCoins(String decision) throws IOException, NoSuchAlgorithmException {
-        List<AccountResponse> account = getAccount();
+    private OrderResponse orderCoins(String decision, AuthUser authUser) throws Exception {
+        List<AccountResponse> account = getAccount(authUser);
 
         AccountResponse KRW = new AccountResponse();
         AccountResponse ETH = new AccountResponse();
@@ -169,7 +171,7 @@ public class TradingService {
         String orderUrl = serverUrl + "/v1/orders";
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/json");
-        headers.set("Authorization", jwtTokenProvider.createOrderToken(params));
+        headers.set("Authorization", jwtTokenProvider.createOrderToken(params, authUser));
         HttpEntity<String> entity = new HttpEntity<>(new Gson().toJson(params), headers);
 
         return restTemplate.exchange(

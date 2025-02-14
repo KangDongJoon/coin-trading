@@ -22,8 +22,8 @@ public class GptController {
         return ResponseEntity.ok(gptService.aiDecision());
     }
 
-    @PostMapping("/v1/gpt/orders")
-    public ResponseEntity<OrderResponse> orderCoin() throws IOException, NoSuchAlgorithmException {
-        return ResponseEntity.ok(gptService.orderCoin());
-    }
+//    @PostMapping("/v1/gpt/orders")
+//    public ResponseEntity<OrderResponse> orderCoin() throws IOException, NoSuchAlgorithmException {
+//        return ResponseEntity.ok(gptService.orderCoin());
+//    }
 }

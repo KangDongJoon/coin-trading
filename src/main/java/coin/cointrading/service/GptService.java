@@ -37,59 +37,59 @@ public class GptService {
 //    @Value("${openai.api.key}")
     private String openAiKey;
 
-    public OrderResponse orderCoin() throws IOException, NoSuchAlgorithmException {
-        List<AccountResponse> account = tradingService.getAccount();
-
-        AccountResponse KRW = new AccountResponse();
-        AccountResponse ETH = new AccountResponse();
-
-        for (AccountResponse accountResponse : account) {
-            if (accountResponse.getCurrency().equals("KRW")) KRW = accountResponse;
-            else if (accountResponse.getCurrency().equals("ETH")) ETH = accountResponse;
-        }
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode jsonNode = objectMapper.readTree(aiDecision());
-
-        String decision = jsonNode.path("decision").asText();
-        String side;
-        if (decision.equals("buy")) {
-            side = "bid";
-        } else if (decision.equals("sell")) {
-            side = "ask";
-        } else {
-            return null;
-        }
-
-        double balance = Math.floor(Double.parseDouble(KRW.getBalance()) * 0.9995);
-        String price = Double.toString(balance);
-        String volume = ETH.getBalance();
-        String ord_type = side.equals("bid") ? "price" : "market";
-
-        HashMap<String, String> params = new HashMap<>();
-        params.put("market", "KRW-ETH");
-        params.put("side", side);
-        params.put("ord_type", ord_type);
-
-        if (side.equals("bid")) {
-            params.put("price", price);
-        } else {
-            params.put("volume", volume);
-        }
-
-        String orderUrl = serverUrl + "/v1/orders";
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Content-Type", "application/json");
-        headers.set("Authorization", jwtTokenProvider.createOrderToken(params));
-        HttpEntity<String> entity = new HttpEntity<>(new Gson().toJson(params), headers);
-
-        return restTemplate.exchange(
-                orderUrl,
-                HttpMethod.POST,
-                entity,
-                new ParameterizedTypeReference<OrderResponse>() {
-                }).getBody();
-    }
+//    public OrderResponse orderCoin() throws IOException, NoSuchAlgorithmException {
+//        List<AccountResponse> account = tradingService.getAccount();
+//
+//        AccountResponse KRW = new AccountResponse();
+//        AccountResponse ETH = new AccountResponse();
+//
+//        for (AccountResponse accountResponse : account) {
+//            if (accountResponse.getCurrency().equals("KRW")) KRW = accountResponse;
+//            else if (accountResponse.getCurrency().equals("ETH")) ETH = accountResponse;
+//        }
+//
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        JsonNode jsonNode = objectMapper.readTree(aiDecision());
+//
+//        String decision = jsonNode.path("decision").asText();
+//        String side;
+//        if (decision.equals("buy")) {
+//            side = "bid";
+//        } else if (decision.equals("sell")) {
+//            side = "ask";
+//        } else {
+//            return null;
+//        }
+//
+//        double balance = Math.floor(Double.parseDouble(KRW.getBalance()) * 0.9995);
+//        String price = Double.toString(balance);
+//        String volume = ETH.getBalance();
+//        String ord_type = side.equals("bid") ? "price" : "market";
+//
+//        HashMap<String, String> params = new HashMap<>();
+//        params.put("market", "KRW-ETH");
+//        params.put("side", side);
+//        params.put("ord_type", ord_type);
+//
+//        if (side.equals("bid")) {
+//            params.put("price", price);
+//        } else {
+//            params.put("volume", volume);
+//        }
+//
+//        String orderUrl = serverUrl + "/v1/orders";
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.set("Content-Type", "application/json");
+//        headers.set("Authorization", jwtTokenProvider.createOrderToken(params));
+//        HttpEntity<String> entity = new HttpEntity<>(new Gson().toJson(params), headers);
+//
+//        return restTemplate.exchange(
+//                orderUrl,
+//                HttpMethod.POST,
+//                entity,
+//                new ParameterizedTypeReference<OrderResponse>() {
+//                }).getBody();
+//    }
 
     public String aiDecision() throws IOException {
         final String gptUrl = "https://api.openai.com/v1/chat/completions";

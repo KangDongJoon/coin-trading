@@ -46,12 +46,14 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
         if (jwt != null) {
             try {
                 DecodedJWT decodedJWT = jwtTokenProvider.extractClaims(jwt);  // JWT 검증 및 파싱
-                Long userId = Long.valueOf(decodedJWT.getSubject());
+                String userId = decodedJWT.getSubject();
 
                 if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     String userNickname = decodedJWT.getClaim("userNickname").asString();
+                    String upbitSecretKey = decodedJWT.getClaim("upbitSecretKey").asString();
+                    String upbitAccessKey = decodedJWT.getClaim("upbitAccessKey").asString();
 
-                    AuthUser authUser = new AuthUser(userId, userNickname);
+                    AuthUser authUser = new AuthUser(userId, userNickname, upbitSecretKey, upbitAccessKey);
 
                     JwtAuthenticationToken authenticationToken = new JwtAuthenticationToken(authUser);
                     authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(httpRequest));

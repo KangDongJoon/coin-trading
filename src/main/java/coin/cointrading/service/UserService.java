@@ -4,6 +4,7 @@ import coin.cointrading.domain.User;
 import coin.cointrading.dto.LoginRequest;
 import coin.cointrading.dto.UserSignupRequest;
 import coin.cointrading.repository.UserRepository;
+import coin.cointrading.util.AES256Util;
 import coin.cointrading.util.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -21,9 +22,10 @@ public class UserService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
+    private final AES256Util aes256Util;
 
     @Transactional
-    public void signup(UserSignupRequest request) {
+    public void signup(UserSignupRequest request) throws Exception {
         // email을 통한 중복 가입 확인
         Optional<User> existingUser = userRepository.findByUserId(request.getUserId());
         if (existingUser.isPresent()) {
@@ -33,13 +35,17 @@ public class UserService {
         // 비밀번호 암호화
         String encodePassword = passwordEncoder.encode(request.getPassword());
 
+        // API키 암호화
+        String encodeSecret = aes256Util.encrypt(request.getSecretKey());
+        String encodeAccess = aes256Util.encrypt(request.getAccessKey());
+
         // 유저 객체 생성
         User user = new User(
                 request.getUserId(),
                 encodePassword,
                 request.getUserNickname(),
-                request.getSecretKey(),
-                request.getAccessKey()
+                encodeSecret,
+                encodeAccess
         );
 
         // 유저 DB 저장
@@ -58,9 +64,12 @@ public class UserService {
         }
 
         String token = jwtTokenProvider.createLoginToken(
-                user.getId(),
-                user.getUserNickname()
+                user.getUserId(),
+                user.getUserNickname(),
+                user.getUpbitSecretKey(),
+                user.getUpbitAccessKey()
         );
+        System.out.println("token = " + token);
         return token;
     }
 }

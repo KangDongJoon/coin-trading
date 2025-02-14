@@ -1,10 +1,12 @@
 package coin.cointrading.util;
 
+import coin.cointrading.domain.AuthUser;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -16,25 +18,26 @@ import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 @Component
+@RequiredArgsConstructor
 public class JwtTokenProvider {
 
-    @Value("${upbit.access-key}")
     private String accessKey;
-    @Value("${upbit.secret-key}")
     private String secretKey;
     @Value("${jwt.secret.key}")
     private String jwtSecretKey;
     private static final String BEARER_PREFIX = "Bearer ";
+    private final AES256Util aes256Util;
 
-    public String createLoginToken(Long userId, String userNickname) {
+    public String createLoginToken(String userId, String userNickname, String upbitSecretKey, String upbitAccessKey) {
         Algorithm algorithm = Algorithm.HMAC256(jwtSecretKey);  // 비밀 키로 서명
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"));
         Date date = calendar.getTime(); // KST 기준으로 발급 시각 설정
-        System.out.println(date);
 
         String jwtToken = JWT.create()
-                .withSubject(String.valueOf(userId))  // userId를 subject로 설정
-                .withClaim("userNickname", userNickname)  // nickname을 claim으로 추가
+                .withSubject(String.valueOf(userId))
+                .withClaim("userNickname", userNickname)
+                .withClaim("upbitSecretKey", upbitSecretKey)
+                .withClaim("upbitAccessKey", upbitAccessKey)
                 .withIssuedAt(date)  // 발급일
                 .withExpiresAt(new Date(date.getTime() + 3600000))  // 만료일: 1시간
                 .sign(algorithm);  // 서명
@@ -42,7 +45,10 @@ public class JwtTokenProvider {
         return jwtToken;
     }
 
-    public String createAccountToken() {
+    public String createAccountToken(AuthUser authUser) throws Exception {
+        secretKey = aes256Util.decrypt(authUser.getUpbitSecretKey());
+        accessKey = aes256Util.decrypt(authUser.getUpbitAccessKey());
+
         Algorithm algorithm = Algorithm.HMAC256(secretKey);
         String jwtToken = JWT.create()
                 .withClaim("access_key", accessKey)
@@ -52,7 +58,10 @@ public class JwtTokenProvider {
         return "Bearer " + jwtToken;
     }
 
-    public String createOrderToken(HashMap<String, String> params) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+    public String createOrderToken(HashMap<String, String> params, AuthUser authUser) throws Exception {
+        secretKey = aes256Util.decrypt(authUser.getUpbitSecretKey());
+        accessKey = aes256Util.decrypt(authUser.getUpbitAccessKey());
+
         ArrayList<String> queryElements = new ArrayList<>();
         for (Map.Entry<String, String> entity : params.entrySet()) {
             queryElements.add(entity.getKey() + "=" + entity.getValue());
