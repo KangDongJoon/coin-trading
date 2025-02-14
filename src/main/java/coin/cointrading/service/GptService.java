@@ -12,8 +12,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.gson.Gson;
 import lombok.RequiredArgsConstructor;
 import okhttp3.*;
-import okhttp3.MediaType;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -36,7 +34,7 @@ public class GptService {
     private final TradingService tradingService;
     private final RestTemplate restTemplate;
 
-    @Value("${openai.api.key}")
+//    @Value("${openai.api.key}")
     private String openAiKey;
 
     public OrderResponse orderCoin() throws IOException, NoSuchAlgorithmException {

@@ -13,8 +13,15 @@
         h1 {
             color: #333;
         }
+        .btn-container {
+            display: flex;
+            flex-direction: column; /* 버튼을 위아래로 배치 */
+            align-items: center;
+            gap: 10px; /* 버튼 사이 간격 */
+        }
         button {
-            padding: 10px 20px;
+            width: 200px;
+            padding: 10px;
             font-size: 16px;
             cursor: pointer;
             background-color: #007bff;
@@ -26,6 +33,13 @@
         button:hover {
             background-color: #0056b3;
         }
+        #stopButton {
+            display: none; /* 처음에는 숨김 */
+            background-color: #dc3545;
+        }
+        #stopButton:hover {
+            background-color: #c82333;
+        }
     </style>
 </head>
 <body>
@@ -33,14 +47,67 @@
 <h1>환영합니다!</h1>
 <p>여기에서 프로그램을 실행할 수 있습니다.</p>
 
-<button onclick="startProgram()">프로그램 동작</button>
+<div class="btn-container">
+    <button id="startButton" onclick="startProgram()">프로그램 동작</button>
+    <button id="stopButton" onclick="stopProgram()">중단하기</button>
+</div>
 
 <script>
+    // 페이지가 로드될 때 버튼 상태 복원
+    window.onload = function() {
+        const isRunning = localStorage.getItem('isRunning');
+        const startButton = document.getElementById("startButton");
+        const stopButton = document.getElementById("stopButton");
+
+        if (isRunning === "true") {
+            startButton.textContent = "동작 중..."; // 버튼 텍스트 변경
+            startButton.disabled = true; // 비활성화
+            stopButton.style.display = "block"; // 중단하기 버튼 표시
+        } else {
+            stopButton.style.display = "none"; // 중단하기 버튼 숨김
+        }
+    };
+
     function startProgram() {
-        fetch('/v1/starts', { method: 'POST' }) // 서버의 /start 엔드포인트 호출
+        const startButton = document.getElementById("startButton");
+        const stopButton = document.getElementById("stopButton");
+
+        startButton.textContent = "동작 중..."; // 버튼 텍스트 변경
+        startButton.disabled = true; // 비활성화
+        stopButton.style.display = "block"; // 중단하기 버튼 표시
+
+        // 상태를 로컬 스토리지에 저장
+        localStorage.setItem('isRunning', 'true');
+
+        fetch('/v1/starts', { method: 'POST' })
             .then(response => response.text())
-            .then(data => alert(data)) // 응답 메시지를 alert 창으로 표시
+            .then(data => alert(data))
+            .catch(error => {
+                alert("오류 발생: " + error);
+                resetButtons(); // 오류 시 버튼 원래대로
+            });
+    }
+
+    function stopProgram() {
+        fetch('/v1/stops', { method: 'POST' })
+            .then(response => response.text())
+            .then(data => {
+                alert(data);
+                resetButtons(); // 중단 후 버튼 원래대로
+            })
             .catch(error => alert("오류 발생: " + error));
+    }
+
+    function resetButtons() {
+        const startButton = document.getElementById("startButton");
+        const stopButton = document.getElementById("stopButton");
+
+        startButton.textContent = "프로그램 동작"; // 버튼 원래 텍스트
+        startButton.disabled = false; // 다시 활성화
+        stopButton.style.display = "none"; // 중단하기 버튼 숨김
+
+        // 상태를 로컬 스토리지에서 삭제
+        localStorage.removeItem('isRunning');
     }
 </script>
 

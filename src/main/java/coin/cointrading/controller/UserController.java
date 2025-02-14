@@ -5,6 +5,7 @@ import coin.cointrading.dto.UserSignupRequest;
 import coin.cointrading.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class UserController {
 
+    @Value("${ec2.domain}")
+    private String domain;
     private final UserService userService;
 
     @PostMapping("/signup")
@@ -41,14 +44,16 @@ public class UserController {
         try {
             String token = userService.login(request); // JWT 생성
 
+            System.out.println("토큰생성");
             // HttpOnly, Secure 쿠키 설정
             ResponseCookie cookie = ResponseCookie.from("Authorization", token)
                     .httpOnly(true)   // JavaScript에서 접근 불가
-                    .secure(true)     // HTTPS에서만 전송
+                    .secure(false)
                     .path("/")        // 모든 경로에서 쿠키 사용 가능
-                    .sameSite("Strict") // CSRF 방지
+                    .sameSite("Lax")
+                    .domain(domain)
                     .build();
-
+            System.out.println("쿠키생성");
             response.addHeader("Set-Cookie", cookie.toString());
 
             return ResponseEntity.ok("로그인 성공");

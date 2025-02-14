@@ -33,6 +33,14 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse httpResponse,
             @NonNull FilterChain chain
     ) throws ServletException, IOException {
+        String requestURI = httpRequest.getRequestURI();
+
+        // ✅ 인증이 필요 없는 URL이라면 필터를 건너뜀
+        if (requestURI.equals("/") || requestURI.startsWith("/auth") || requestURI.startsWith("/error")) {
+            chain.doFilter(httpRequest, httpResponse);
+            return;
+        }
+
         String jwt = resolveToken(httpRequest); // ✅ 여기서 JWT 가져오기
 
         if (jwt != null) {

@@ -61,7 +61,6 @@ public class UserService {
                 user.getId(),
                 user.getUserNickname()
         );
-
         return token;
     }
 }

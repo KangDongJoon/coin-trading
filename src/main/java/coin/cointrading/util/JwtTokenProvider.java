@@ -28,7 +28,9 @@ public class JwtTokenProvider {
 
     public String createLoginToken(Long userId, String userNickname) {
         Algorithm algorithm = Algorithm.HMAC256(jwtSecretKey);  // 비밀 키로 서명
-        Date date = new Date();  // 발급 시각
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"));
+        Date date = calendar.getTime(); // KST 기준으로 발급 시각 설정
+        System.out.println(date);
 
         String jwtToken = JWT.create()
                 .withSubject(String.valueOf(userId))  // userId를 subject로 설정
