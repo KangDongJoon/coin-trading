@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BackData Table</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<h2>BackData Table</h2>
+<table>
+    <thead>
+    <tr>
+        <th>날짜</th>
+        <th>거래여부</th>
+        <th>수익률</th>
+    </tr>
+    </thead>
+    <tbody id="table-body">
+    <!-- 데이터가 여기에 추가됨 -->
+    </tbody>
+</table>
+
+<script>
+    const API_BASE_URL = window.location.origin.includes("localhost")
+        ? "http://localhost"
+        : window.location.origin;
+
+    const API_URL = `${API_BASE_URL}:8080/v1/backdata`; // API 경로
+
+    async function fetchData() {
+        try {
+            const response = await fetch(API_URL);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            const data = await response.json();  // 백엔드에서 받아온 JSON 데이터
+
+            const tableBody = document.getElementById("table-body");
+            tableBody.innerHTML = ""; // 기존 데이터 초기화
+
+            data.forEach(item => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${item.day}</td>
+                    <td>${item.tradingStatus}</td>
+                    <td>${item.returnRate}%</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error("데이터 불러오기 실패:", error);
+            alert("데이터를 불러오는 중 오류가 발생했습니다.");
+        }
+    }
+
+    fetchData();  // 페이지 로드 시 데이터 가져오기
+</script>
+
+</body>
+</html>

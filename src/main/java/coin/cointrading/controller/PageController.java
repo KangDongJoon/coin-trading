@@ -31,4 +31,9 @@ public class PageController {
         return "home";
     }
 
+    @GetMapping("/returnrate")
+    public String showReturnPage() {
+        return "returnrate";
+    }
+
 }

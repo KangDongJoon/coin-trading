@@ -40,6 +40,12 @@
         #stopButton:hover {
             background-color: #c82333;
         }
+        #returnRateButton {
+            background-color: #28a745;
+        }
+        #returnRateButton:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
@@ -50,22 +56,33 @@
 <div class="btn-container">
     <button id="startButton" onclick="startProgram()">프로그램 동작</button>
     <button id="stopButton" onclick="stopProgram()">중단하기</button>
+    <button id="returnRateButton" onclick="goToReturnRate()">수익률 페이지로 이동</button>
 </div>
 
 <script>
-    // 페이지가 로드될 때 버튼 상태 복원
+    // 페이지 로드 시 서버에서 실행 상태를 확인하여 버튼 상태 설정
     window.onload = function() {
-        const isRunning = localStorage.getItem('isRunning');
         const startButton = document.getElementById("startButton");
         const stopButton = document.getElementById("stopButton");
 
-        if (isRunning === "true") {
-            startButton.textContent = "동작 중..."; // 버튼 텍스트 변경
-            startButton.disabled = true; // 비활성화
-            stopButton.style.display = "block"; // 중단하기 버튼 표시
-        } else {
-            stopButton.style.display = "none"; // 중단하기 버튼 숨김
-        }
+        // 서버에서 실행 상태를 가져옴
+        fetch('/v1/status')
+            .then(response => response.json())
+            .then(data => {
+                const isRunning = data.isRunning;
+
+                // 실행 중인 경우 버튼 상태 업데이트
+                if (isRunning === "true") {
+                    startButton.textContent = "동작 중..."; // 버튼 텍스트 변경
+                    startButton.disabled = true; // 시작 버튼 비활성화
+                    stopButton.style.display = "block"; // 중단하기 버튼 표시
+                } else {
+                    stopButton.style.display = "none"; // 중단하기 버튼 숨김
+                }
+            })
+            .catch(error => {
+                console.error("상태 확인 오류:", error);
+            });
     };
 
     function startProgram() {
@@ -73,18 +90,16 @@
         const stopButton = document.getElementById("stopButton");
 
         startButton.textContent = "동작 중..."; // 버튼 텍스트 변경
-        startButton.disabled = true; // 비활성화
+        startButton.disabled = true; // 시작 버튼 비활성화
         stopButton.style.display = "block"; // 중단하기 버튼 표시
 
-        // 상태를 로컬 스토리지에 저장
-        localStorage.setItem('isRunning', 'true');
-
+        // POST 요청으로 서버에 프로그램 시작 요청
         fetch('/v1/starts', { method: 'POST' })
             .then(response => response.text())
             .then(data => alert(data))
             .catch(error => {
                 alert("오류 발생: " + error);
-                resetButtons(); // 오류 시 버튼 원래대로
+                resetButtons(); // 오류 발생 시 버튼 원래대로 복원
             });
     }
 
@@ -93,7 +108,7 @@
             .then(response => response.text())
             .then(data => {
                 alert(data);
-                resetButtons(); // 중단 후 버튼 원래대로
+                resetButtons(); // 중단 후 버튼 원래대로 복원
             })
             .catch(error => alert("오류 발생: " + error));
     }
@@ -103,11 +118,12 @@
         const stopButton = document.getElementById("stopButton");
 
         startButton.textContent = "프로그램 동작"; // 버튼 원래 텍스트
-        startButton.disabled = false; // 다시 활성화
+        startButton.disabled = false; // 버튼 다시 활성화
         stopButton.style.display = "none"; // 중단하기 버튼 숨김
+    }
 
-        // 상태를 로컬 스토리지에서 삭제
-        localStorage.removeItem('isRunning');
+    function goToReturnRate() {
+        window.location.href = "/returnrate"; // 수익률 페이지로 이동
     }
 </script>
 

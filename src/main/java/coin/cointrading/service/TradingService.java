@@ -1,10 +1,12 @@
 package coin.cointrading.service;
 
 import coin.cointrading.domain.AuthUser;
+import coin.cointrading.domain.BackData;
 import coin.cointrading.dto.AccountResponse;
 import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.dto.SimpleCandleDTO;
 import coin.cointrading.dto.UpbitCandle;
+import coin.cointrading.repository.BackDataRepository;
 import coin.cointrading.util.AES256Util;
 import coin.cointrading.util.JwtTokenProvider;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -21,6 +23,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -38,7 +41,8 @@ public class TradingService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RestTemplate restTemplate;
     private final AES256Util aes256Util;
-    private boolean running;
+    private boolean running = false;
+    private final BackDataRepository backDataRepository;
 
     public List<AccountResponse> getAccount(AuthUser authUser) throws Exception {
         String accountUrl = serverUrl + "/v1/accounts";
@@ -117,7 +121,7 @@ public class TradingService {
                 stopLossExecuted = true;
             }
 
-            if(now.getMinute() == alarmTime.getMinute()){
+            if (now.getMinute() == alarmTime.getMinute()) {
                 log.info("---프로그램 실행 중--- 목표가: {}   매수여부: {}  ", todayTarget, hold);
                 alarmTime = now.plusMinutes(30);
             }
@@ -129,6 +133,10 @@ public class TradingService {
     public void stopProgram() {
         running = false;
         log.info("프로그램 종료");
+    }
+
+    public boolean statusProgram() {
+        return running;
     }
 
     private OrderResponse orderCoins(String decision, AuthUser authUser) throws Exception {
@@ -186,7 +194,7 @@ public class TradingService {
         String candle = yesterdayCandle();
         ObjectMapper objectMapper = new ObjectMapper();
 
-        List<JsonNode> candles = objectMapper.readValue(candle, new TypeReference<List<JsonNode>>() {
+        List<JsonNode> candles = objectMapper.readValue(candle, new TypeReference<>() {
         });
         JsonNode yesterday = candles.get(1);
         double lowPrice = yesterday.get("low_price").asDouble();
@@ -242,6 +250,80 @@ public class TradingService {
 
             // trade_price(현재 가격) 값 추출
             return jsonNode.get(0).get("trade_price").asDouble();
+        }
+    }
+
+    @Transactional
+    public void postBackData() throws IOException {
+        OkHttpClient client = new OkHttpClient();
+
+        Request request = new Request.Builder()
+                .url("https://api.upbit.com/v1/candles/days?market=KRW-ETH&count=3")
+                .get()
+                .addHeader("accept", "application/json")
+                .build();
+
+        // try-with-resources 구문을 사용하여 자동으로 닫히도록 함
+        try (Response response = client.newCall(request).execute()) {
+            String jsonResponse = response.body().string();
+
+            // Jackson을 이용한 JSON 파싱
+            ObjectMapper objectMapper = new ObjectMapper();
+            UpbitCandle[] candles = objectMapper.readValue(jsonResponse, UpbitCandle[].class);
+
+            for (int i = 1; i < candles.length - 1; i++) {
+                String day = candles[i].getCandleDateTimeKst().substring(0, 10); // 2025-02-16
+                double targetPrice = candles[i + 1].getTradePrice() + (candles[i + 1].getHighPrice() - candles[i + 1].getLowPrice()) * 0.5;
+                double todayHighPrice = candles[i].getHighPrice();
+                String tradingStatus = todayHighPrice >= targetPrice ? "O" : "X";
+                double returnRate = Math.round((((candles[i].getTradePrice() - targetPrice) / targetPrice) * 100) * 10.0) / 10.0;
+
+                BackData backData = new BackData(
+                        day,
+                        tradingStatus,
+                        returnRate);
+
+                backDataRepository.save(backData);
+            }
+        }
+    }
+
+    public List<BackData> getBackData() {
+        return backDataRepository.findAll();
+    }
+
+    @Transactional
+    public void initBackData() throws IOException {
+        OkHttpClient client = new OkHttpClient();
+
+        Request request = new Request.Builder()
+                .url("https://api.upbit.com/v1/candles/days?market=KRW-ETH&count=200")
+                .get()
+                .addHeader("accept", "application/json")
+                .build();
+
+        // try-with-resources 구문을 사용하여 자동으로 닫히도록 함
+        try (Response response = client.newCall(request).execute()) {
+            String jsonResponse = response.body().string();
+
+            // Jackson을 이용한 JSON 파싱
+            ObjectMapper objectMapper = new ObjectMapper();
+            UpbitCandle[] candles = objectMapper.readValue(jsonResponse, UpbitCandle[].class);
+
+            for (int i = 1; i < candles.length - 1; i++) {
+                String day = candles[i].getCandleDateTimeKst().substring(0, 10); // 2025-02-16
+                double targetPrice = candles[i + 1].getTradePrice() + (candles[i + 1].getHighPrice() - candles[i + 1].getLowPrice()) * 0.5;
+                double todayHighPrice = candles[i].getHighPrice();
+                String tradingStatus = todayHighPrice >= targetPrice ? "O" : "X";
+                double returnRate = Math.round((((candles[i].getTradePrice() - targetPrice) / targetPrice) * 100) * 10.0) / 10.0;
+
+                BackData backData = new BackData(
+                        day,
+                        tradingStatus,
+                        returnRate);
+
+                backDataRepository.save(backData);
+            }
         }
     }
 }
