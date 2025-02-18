@@ -22,11 +22,6 @@ public class TradingController {
 
     private final TradingService tradingService;
 
-    @GetMapping("/v1/accounts")
-    public ResponseEntity<List<AccountResponse>> getAccount(@AuthenticationPrincipal AuthUser authUser) throws Exception {
-        return ResponseEntity.ok(tradingService.getAccount(authUser));
-    }
-
     @PostMapping("/v1/starts")
     public void startProgram(@AuthenticationPrincipal AuthUser authUser) {
         try {

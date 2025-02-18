@@ -44,7 +44,6 @@ public class UserController {
         try {
             String token = userService.login(request); // JWT 생성
 
-            System.out.println("토큰생성");
             // HttpOnly, Secure 쿠키 설정
             ResponseCookie cookie = ResponseCookie.from("Authorization", token)
                     .httpOnly(true)   // JavaScript에서 접근 불가
@@ -53,7 +52,6 @@ public class UserController {
                     .sameSite("Lax")
                     .domain(domain)
                     .build();
-            System.out.println("쿠키생성");
             response.addHeader("Set-Cookie", cookie.toString());
 
             return ResponseEntity.ok("로그인 성공");
@@ -61,6 +59,4 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인 실패");
         }
     }
-
-
 }

@@ -1,15 +1,12 @@
 package coin.cointrading.controller;
 
-import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.service.GptService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 
 @RestController
 @RequiredArgsConstructor
