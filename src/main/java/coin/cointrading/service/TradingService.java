@@ -16,7 +16,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
@@ -24,20 +31,82 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class TradingService {
 
+    private final ConcurrentHashMap<String, Future<?>> userTrades = new ConcurrentHashMap<>();
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final BackDataRepository backDataRepository;
     private final UpbitService upbitService;
-    private boolean running = false;
+    private final Map<String, AtomicBoolean> userRunningStatus = new HashMap<>();
+
+    // 프로그램 실행
+    public void startTrading(AuthUser authUser) {
+        String userId = authUser.getUserId();
+
+        // 이미 실행 중인 거래 프로그램이 있는지 확인
+        if (userTrades.containsKey(userId)) {
+            throw new IllegalStateException("이미 실행 중인 프로그램이 있습니다.");
+        }
+
+        // 각 사용자의 running 상태 가져오기, 없으면 false로 초기화
+        AtomicBoolean userRunning = userRunningStatus.computeIfAbsent(userId, k -> new AtomicBoolean(false));
+
+        // 실행 상태가 false인 경우에만 실행하도록 확인
+        if (userRunning.get()) {
+            throw new IllegalStateException("현재 거래 프로그램이 이미 실행 중입니다.");
+        }
+
+        // 새로운 작업을 실행하고 Future로 저장
+        Future<?> future = executorService.submit(() -> {
+            try {
+                // 거래 프로그램 실행 전에 running 상태를 true로 변경
+                userRunning.set(true);
+                // 사용자별로 running 상태를 체크하며 거래 프로그램 실행
+                startProgram(authUser);
+            } catch (Exception e) {
+                System.err.println("거래 실행 중 오류: " + e.getMessage());
+            }
+        });
+
+        // 사용자별로 실행 상태를 userTrades에 저장
+        userTrades.put(userId, future);
+    }
+
+    // 프로그램 종료
+    public void stopTrading(AuthUser authUser) {
+        String userId = authUser.getUserId();
+
+        // 각 사용자의 running 상태 가져오기, 없으면 false로 초기화
+        AtomicBoolean userRunning = userRunningStatus.computeIfAbsent(userId, k -> new AtomicBoolean(false));
+
+        // 사용자별로 running을 false로 설정하여 while문 종료
+        userRunning.set(false);
+
+        // 해당 사용자에 대한 작업을 찾기
+        Future<?> future = userTrades.remove(userId);
+
+        if (future != null) {
+            boolean wasCancelled = future.cancel(true); // 작업 종료
+            if (wasCancelled) {
+                System.out.println("사용자 " + userId + "의 거래 프로그램이 정상적으로 종료되었습니다.");
+            } else {
+                System.out.println("사용자 " + userId + "의 거래 프로그램 종료 실패.");
+            }
+        } else {
+            System.out.println("실행 중인 거래 프로그램이 없습니다.");
+        }
+    }
 
     public void startProgram(AuthUser authUser) throws Exception {
-        log.info("프로그램 동작 시작");
-        running = true;
+        AtomicBoolean running = userRunningStatus.get(authUser.getUserId());
+        log.info("프로그램 동작 시작 for user: {}", authUser.getNickName());
+
         double todayTarget = upbitService.checkTarget(); // 당일 목표가
         boolean op_mode = false; // 시작하는 날 매수하지않기
         boolean hold = false; // 이미 매수한 상태라면 매수시도 하지않기(true = 매수, false = 매도)
         boolean stopLossExecuted = false; // 손절 여부 추적
 
         LocalTime alarmTime = LocalTime.now().plusMinutes(30);
-        while (running) {
+        while (running.get()) {
+            log.info("사용자: {}", authUser.getUserId());
             LocalTime now = LocalTime.now(); // 현재시간
             double current = upbitService.current(); // 현재가
             // 목표가 지정 9시 00분 20 ~ 30초 사이
@@ -99,14 +168,24 @@ public class TradingService {
         }
     }
 
-    public void stopProgram() {
-        running = false;
-        log.info("프로그램 종료");
+    // 사용자별 실행 상태 확인
+    public String checkStatus(AuthUser authUser) {
+        String userId = authUser.getUserId();
+        if (userTrades.containsKey(userId)) {
+            return "true"; // 이미 실행 중
+        } else {
+            return "false"; // 실행 중 아님
+        }
     }
 
-    public boolean statusProgram() {
-        return running;
-    }
+//    public void stopProgram() {
+//        running = false;
+//        log.info("프로그램 종료");
+//    }
+//
+//    public boolean statusProgram() {
+//        return running;
+//    }
 
     @Transactional
     public void postBackData() throws IOException {
