@@ -4,6 +4,8 @@ import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.BackData;
 import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.dto.UpbitCandle;
+import coin.cointrading.exception.CustomException;
+import coin.cointrading.exception.ErrorCode;
 import coin.cointrading.repository.BackDataRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -42,27 +44,19 @@ public class TradingService {
         String userId = authUser.getUserId();
 
         // 이미 실행 중인 거래 프로그램이 있는지 확인
-        if (userTrades.containsKey(userId)) {
-            throw new IllegalStateException("이미 실행 중인 프로그램이 있습니다.");
-        }
+        if (userTrades.containsKey(userId)) throw new CustomException(ErrorCode.TRADING_ALREADY_GENERATE);
 
         // 각 사용자의 running 상태 가져오기, 없으면 false로 초기화
         AtomicBoolean userRunning = userRunningStatus.computeIfAbsent(userId, k -> new AtomicBoolean(false));
-
-        // 실행 상태가 false인 경우에만 실행하도록 확인
-        if (userRunning.get()) {
-            throw new IllegalStateException("현재 거래 프로그램이 이미 실행 중입니다.");
-        }
 
         // 새로운 작업을 실행하고 Future로 저장
         Future<?> future = executorService.submit(() -> {
             try {
                 // 거래 프로그램 실행 전에 running 상태를 true로 변경
                 userRunning.set(true);
-                // 사용자별로 running 상태를 체크하며 거래 프로그램 실행
                 startProgram(authUser);
             } catch (Exception e) {
-                System.err.println("거래 실행 중 오류: " + e.getMessage());
+                log.info("프로그램 실행 중 오류 발생: {}", e.getMessage());
             }
         });
 
@@ -74,30 +68,29 @@ public class TradingService {
     public void stopTrading(AuthUser authUser) {
         String userId = authUser.getUserId();
 
-        // 각 사용자의 running 상태 가져오기, 없으면 false로 초기화
-        AtomicBoolean userRunning = userRunningStatus.computeIfAbsent(userId, k -> new AtomicBoolean(false));
+        // 실행중인 프로그램 가져오기
+        Future<?> future = userTrades.remove(userId);
+        if (future == null) throw new CustomException(ErrorCode.TRADING_NOT_FOUND);
+
+        // 각 사용자의 running 상태 가져오기
+        AtomicBoolean userRunning = userRunningStatus.get(userId);
 
         // 사용자별로 running을 false로 설정하여 while문 종료
         userRunning.set(false);
 
-        // 해당 사용자에 대한 작업을 찾기
-        Future<?> future = userTrades.remove(userId);
-
-        if (future != null) {
-            boolean wasCancelled = future.cancel(true); // 작업 종료
-            if (wasCancelled) {
-                System.out.println("사용자 " + userId + "의 거래 프로그램이 정상적으로 종료되었습니다.");
-            } else {
-                System.out.println("사용자 " + userId + "의 거래 프로그램 종료 실패.");
-            }
-        } else {
-            System.out.println("실행 중인 거래 프로그램이 없습니다.");
+        // 작업 종료
+        try {
+            future.cancel(true);
+            userRunningStatus.remove(userId);
+            log.info("{}의 거래 프로그램이 정상적으로 종료되었습니다.", userId);
+        } catch (Exception e) {
+            log.info("프로그램 종료 중 오류 발생: {}", e.getMessage());
         }
     }
 
     public void startProgram(AuthUser authUser) throws Exception {
         AtomicBoolean running = userRunningStatus.get(authUser.getUserId());
-        log.info("프로그램 동작 시작 for user: {}", authUser.getNickName());
+        log.info("프로그램 동작 시작 for user: {}", authUser.getUserId());
 
         double todayTarget = upbitService.checkTarget(); // 당일 목표가
         boolean op_mode = false; // 시작하는 날 매수하지않기
@@ -119,7 +112,6 @@ public class TradingService {
                 } catch (Exception e) {
                     // 예외가 발생하면 로그에 기록
                     log.error("목표가 산정 중 오류 발생: {}", e.getMessage());
-                    e.printStackTrace();
                 }
             }
 
@@ -142,10 +134,11 @@ public class TradingService {
                     ror = Math.round(ror * 10.0) / 10.0; // 소수점 한 자리까지 반올림
                     log.info("매도 수익률: {}%", ror);
                     Thread.sleep(10000);
+                } catch (InterruptedException e) {
+                    break;
                 } catch (Exception e) {
                     // 예외가 발생하면 로그에 기록
                     log.error("매도 처리 중 오류 발생: {}", e.getMessage());
-                    e.printStackTrace();
                 }
             }
 
@@ -164,7 +157,11 @@ public class TradingService {
                 alarmTime = now.plusMinutes(30);
             }
 
-            Thread.sleep(1000); // 특정시간마다 하게
+            try {
+                Thread.sleep(1000); // 특정시간마다 하게
+            } catch (InterruptedException e) {
+                break;
+            }
         }
     }
 
@@ -177,15 +174,6 @@ public class TradingService {
             return "false"; // 실행 중 아님
         }
     }
-
-//    public void stopProgram() {
-//        running = false;
-//        log.info("프로그램 종료");
-//    }
-//
-//    public boolean statusProgram() {
-//        return running;
-//    }
 
     @Transactional
     public void postBackData() throws IOException {
