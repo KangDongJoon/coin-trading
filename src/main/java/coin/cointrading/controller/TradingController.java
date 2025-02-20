@@ -2,7 +2,6 @@ package coin.cointrading.controller;
 
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.BackData;
-import coin.cointrading.dto.AccountResponse;
 import coin.cointrading.service.TradingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,26 +22,28 @@ public class TradingController {
     private final TradingService tradingService;
 
     @PostMapping("/v1/starts")
-    public void startProgram(@AuthenticationPrincipal AuthUser authUser) {
+    public String startProgram(@AuthenticationPrincipal AuthUser authUser) {
         try {
-            tradingService.startProgram(authUser);
+            // executeTrade 메서드 비동기 호출
+            tradingService.startTrading(authUser);
+            return "매매 프로그램이 정상적으로 실행되었습니다.";
         } catch (Exception e) {
-            e.printStackTrace(); // 예외 출력
-            throw new RuntimeException("Error starting program", e); // 예외 던지기
+            return "매매 프로그램 실행 중 오류가 발생했습니다: " + e.getMessage();
         }
     }
 
     @PostMapping("/v1/stops")
-    public void stopProgram() {
-        tradingService.stopProgram();
+    public void stopProgram(@AuthenticationPrincipal AuthUser authUser) {
+        tradingService.stopTrading(authUser);
     }
 
+    // 상태 확인 API
     @GetMapping("/v1/status")
-    public ResponseEntity<Map<String, String>> getStatus() {
-        Map<String, String> status = new HashMap<>();
-        boolean isRunning = tradingService.statusProgram(); // 프로그램 상태를 확인하는 로직
-        status.put("isRunning", isRunning ? "true" : "false");
-        return ResponseEntity.ok(status);
+    public ResponseEntity<Map<String, String>> checkStatus(@AuthenticationPrincipal AuthUser authUser) {
+        String status = tradingService.checkStatus(authUser); // 사용자 상태 반환
+        Map<String, String> response = new HashMap<>();
+        response.put("isRunning", status);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/v1/initbackdata")
