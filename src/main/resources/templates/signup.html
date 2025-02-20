@@ -1,76 +1,120 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>회원가입 - 코인 매매 플랫폼</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      width: 350px;
-      margin: 80px auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-    }
-    h2 {
-      margin-bottom: 20px;
-    }
-    input {
-      width: 90%;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      font-size: 14px;
-    }
-    .button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      font-size: 16px;
-      color: white;
-      background-color: #28a745;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .button:hover {
-      background-color: #218838;
-    }
-    .back-link {
-      display: block;
-      margin-top: 15px;
-      font-size: 14px;
-      color: #007bff;
-      text-decoration: none;
-    }
-    .back-link:hover {
-      text-decoration: underline;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입 - 코인 매매 플랫폼</title>
+    <style>
+        /* 스타일은 동일 */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 350px;
+            margin: 80px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 16px;
+            color: white;
+            background-color: #28a745;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #218838;
+        }
+
+        .back-link {
+            display: block;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            color: red;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
 
 <div class="container">
-  <h2>회원가입</h2>
-  <form action="/auth/signup" method="post">
-    <input type="text" name="userId" placeholder="아이디" required />
-    <input type="password" name="password" placeholder="비밀번호" required />
-    <input type="text" name="userNickname" placeholder="닉네임" required />
-    <input type="text" name="secretKey" placeholder="Secret Key" required />
-    <input type="text" name="accessKey" placeholder="Access Key" required />
-    <button type="submit" class="button">회원가입</button>
-  </form>
-  <a href="/auth/login" class="back-link">로그인 페이지로 돌아가기</a>
+    <h2>회원가입</h2>
+
+    <div id="error-message" class="error-message"></div>
+
+    <form id="signup-form">
+        <input type="text" name="userId" placeholder="아이디" required/>
+        <input type="password" name="password" placeholder="비밀번호" required/>
+        <input type="text" name="userNickname" placeholder="닉네임" required/>
+        <input type="text" name="secretKey" placeholder="Secret Key" required/>
+        <input type="text" name="accessKey" placeholder="Access Key" required/>
+        <button type="submit" class="button">회원가입</button>
+    </form>
+
+    <a href="/auth/login" class="back-link">로그인 페이지로 돌아가기</a>
 </div>
+
+<script>
+    document.getElementById("signup-form").addEventListener("submit", function (event) {
+        event.preventDefault();  // 폼 기본 제출 동작 방지
+
+        const formData = new FormData(this);
+
+        fetch('/auth/signup', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(errorText => {
+                        document.getElementById("error-message").textContent = errorText;
+                    });
+                }
+                alert("회원가입 성공!");
+                window.location.href = '/auth/login';
+            })
+            .catch(error => {
+                document.getElementById("error-message").textContent = "서버 오류가 발생했습니다. 다시 시도해주세요.";
+            });
+
+    });
+</script>
 
 </body>
 </html>

@@ -3,11 +3,12 @@ package coin.cointrading.service;
 import coin.cointrading.domain.User;
 import coin.cointrading.dto.LoginRequest;
 import coin.cointrading.dto.UserSignupRequest;
+import coin.cointrading.exception.CustomException;
+import coin.cointrading.exception.ErrorCode;
 import coin.cointrading.repository.UserRepository;
 import coin.cointrading.util.AES256Util;
 import coin.cointrading.util.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,11 +27,10 @@ public class UserService {
 
     @Transactional
     public void signup(UserSignupRequest request) throws Exception {
-        // email을 통한 중복 가입 확인
+        // id를 통한 중복 가입 확인
         Optional<User> existingUser = userRepository.findByUserId(request.getUserId());
-        if (existingUser.isPresent()) {
-            throw new IllegalStateException("이미 가입된 아이디입니다.");
-        }
+
+        if (existingUser.isPresent()) throw new CustomException(ErrorCode.AUTH_EXIST_ID);
 
         // 비밀번호 암호화
         String encodePassword = passwordEncoder.encode(request.getPassword());
@@ -53,23 +53,19 @@ public class UserService {
     }
 
     public String login(LoginRequest request) {
-
+        // 유저 가입 확인
         User user = userRepository.findByUserId(request.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("유저가없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_USER_NOT_FOUND));
 
-        // 비밀번호 비교
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            // 비밀번호가 틀린 경우, BadCredentialsException을 발생
-            throw new BadCredentialsException("비밀번호가 틀렸습니다.");
-        }
+        // 비밀번호 확인
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword()))
+            throw new CustomException(ErrorCode.AUTH_PASSWORD_BAD_REQUEST);
 
-        String token = jwtTokenProvider.createLoginToken(
+        return jwtTokenProvider.createLoginToken(
                 user.getUserId(),
                 user.getUserNickname(),
                 user.getUpbitSecretKey(),
                 user.getUpbitAccessKey()
         );
-        System.out.println("token = " + token);
-        return token;
     }
 }

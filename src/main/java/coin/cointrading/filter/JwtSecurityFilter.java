@@ -3,7 +3,7 @@ package coin.cointrading.filter;
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.util.JwtAuthenticationToken;
 import coin.cointrading.util.JwtTokenProvider;
-import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -62,10 +62,12 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
                 } else {
                     log.error("JWT 파싱 실패: userId가 null이거나 SecurityContext에 이미 인증 정보가 설정됨");
                 }
-
-            } catch (JWTVerificationException e) {
-                log.error("Invalid JWT token", e);
-                httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "유효하지 않은 JWT 서명입니다.");
+            } catch (TokenExpiredException e) {
+                log.error("JWT 만료됨", e);
+                httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                httpResponse.setHeader("Set-Cookie", "Authorization=; Path=/; HttpOnly; Max-Age=0");  // 쿠키 삭제
+                httpResponse.getWriter().write("토큰이 만료되었습니다. 다시 로그인해주세요.");
+                httpResponse.getWriter().flush();
                 return;
             } catch (Exception e) {
                 log.error("Internal server error", e);
