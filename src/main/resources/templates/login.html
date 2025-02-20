@@ -19,7 +19,7 @@
             background: white;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
         h2 {
@@ -64,25 +64,21 @@
             background-color: #0056b3;
         }
 
-        .back-link {
-            display: block;
-            margin-top: 15px;
+        .error-message {
+            color: red;
             font-size: 14px;
-            color: #007bff;
-            text-decoration: none;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
 <div class="container">
     <h2>로그인</h2>
-    <form id="loginForm">
+
+    <form id="login-Form">
         <input type="text" id="userId" name="userId" placeholder="아이디" required>
         <input type="password" id="password" name="password" placeholder="비밀번호" required>
+        <div id="error-message" class="error-message"></div>
         <div class="button-container">
             <button type="submit" class="button">로그인</button>
             <a href="/auth/signup" class="button">회원가입</a>
@@ -92,7 +88,7 @@
 </div>
 
 <script>
-    document.getElementById("loginForm").addEventListener("submit", async function (event) {
+    document.getElementById("login-Form").addEventListener("submit", async function (event) {
         event.preventDefault(); // 기본 제출 방지
 
         const userId = document.getElementById("userId").value;
@@ -106,9 +102,13 @@
                 credentials: "include"  // ✅ 쿠키를 자동으로 포함하도록 설정
             });
 
-            if (response.ok) {
-                window.location.href = "/home";  // JWT가 자동으로 포함된 상태로 요청됨
+            if (!response.ok) {
+                return response.text().then(errorText => {
+                    document.getElementById("error-message").textContent = errorText;
+                });
             }
+            alert("로그인 성공")
+            window.location.href = "/home";  // JWT가 자동으로 포함된 상태로 요청됨
         } catch (error) {
             console.error("로그인 요청 실패", error);
             alert("로그인 중 오류가 발생했습니다.");
