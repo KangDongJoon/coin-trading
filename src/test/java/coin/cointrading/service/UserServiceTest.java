@@ -2,19 +2,21 @@ package coin.cointrading.service;
 
 import coin.cointrading.domain.User;
 import coin.cointrading.dto.UserSignupRequest;
+import coin.cointrading.exception.CustomException;
 import coin.cointrading.repository.UserRepository;
 import coin.cointrading.util.AES256Util;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 class UserServiceTest {
@@ -31,10 +33,10 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
 
-    public UserServiceTest() {
-        MockitoAnnotations.openMocks(this);
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this); // Mockito 어노테이션 초기화
     }
-
     @Test
     void signup() throws Exception {
         // given
@@ -58,5 +60,17 @@ class UserServiceTest {
         assertThat(savedUser.getUserNickname()).isEqualTo(request.getUserNickname());
         assertThat(savedUser.getUpbitSecretKey()).isEqualTo("encryptedSecret");
         assertThat(savedUser.getUpbitAccessKey()).isEqualTo("encryptedAccess");
+    }
+
+    @Test
+    void duplicatedId() {
+        // given
+        UserSignupRequest request = new UserSignupRequest("test1", "test1password", "nick1", "secret1", "access1");
+        User user1 = new User();
+        when(userRepository.findByUserId("test1")).thenReturn(Optional.of(user1));
+
+        // when, then
+        CustomException exception = assertThrows(CustomException.class, () -> userService.signup(request));
+        assertThat(exception.getMessage()).isEqualTo("이미 가입된 ID입니다.");
     }
 }
