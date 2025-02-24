@@ -2,7 +2,9 @@ package coin.cointrading.controller;
 
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.BackData;
+import coin.cointrading.dto.AccountResponse;
 import coin.cointrading.service.TradingService;
+import coin.cointrading.service.UpbitService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,6 +22,12 @@ import java.util.Map;
 public class TradingController {
 
     private final TradingService tradingService;
+    private final UpbitService upbitService;
+
+    @GetMapping("/v1/accounts")
+    public ResponseEntity<List<AccountResponse>> getAccount(@AuthenticationPrincipal AuthUser authUser) throws Exception {
+        return ResponseEntity.ok(upbitService.getAccount(authUser));
+    }
 
     @PostMapping("/v1/starts")
     public String startProgram(@AuthenticationPrincipal AuthUser authUser) {

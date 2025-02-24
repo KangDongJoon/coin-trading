@@ -1,5 +1,6 @@
 package coin.cointrading.service;
 
+import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.User;
 import coin.cointrading.dto.LoginRequest;
 import coin.cointrading.dto.UserSignupRequest;
@@ -13,8 +14,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.http.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -36,6 +41,9 @@ class UserServiceTest {
     @Mock
     private JwtTokenProvider jwtTokenProvider;
 
+    @Mock
+    private RestTemplate restTemplate;
+
     @InjectMocks
     private UserService userService;
 
@@ -48,11 +56,20 @@ class UserServiceTest {
     void signup_success() throws Exception {
         // given
         UserSignupRequest request = new UserSignupRequest("test1", "test1password", "nick1", "secret", "access");
-
+        String accountUrl = "https://api.upbit.com/v1/accounts";
         when(userRepository.findByUserId(request.getUserId())).thenReturn(Optional.empty());
         when(passwordEncoder.encode(request.getPassword())).thenReturn("encodedPassword");
         when(aes256Util.encrypt(request.getSecretKey())).thenReturn("encryptedSecret");
         when(aes256Util.encrypt(request.getAccessKey())).thenReturn("encryptedAccess");
+
+        // Upbit API 응답 설정
+        ResponseEntity<String> response = new ResponseEntity<>("[]", HttpStatus.OK);
+        when(restTemplate.exchange(
+                eq(accountUrl),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class)
+        )).thenReturn(response);
 
         // when
         userService.signup(request);
@@ -79,6 +96,56 @@ class UserServiceTest {
         // when, then
         CustomException exception = assertThrows(CustomException.class, () -> userService.signup(request));
         assertThat(exception.getMessage()).isEqualTo("이미 가입된 ID입니다.");
+    }
+
+    @Test
+    void signup_fail_invalid_apikey() throws Exception {
+        // given
+        UserSignupRequest request = new UserSignupRequest("test1", "test1password", "nick1", "secret", "access");
+        String accountUrl = "https://api.upbit.com/v1/accounts";
+        when(userRepository.findByUserId(request.getUserId())).thenReturn(Optional.empty());
+
+        when(restTemplate.exchange(
+                eq(accountUrl),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class)
+        )).thenThrow(HttpClientErrorException.create(
+                HttpStatus.UNAUTHORIZED,
+                "Unauthorized",
+                HttpHeaders.EMPTY,
+                "{\"error\":{\"name\":\"invalid_access_key\"}}".getBytes(StandardCharsets.UTF_8),
+                StandardCharsets.UTF_8 // 인코딩
+        ));
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class, () -> userService.signup(request));
+        assertThat(exception.getMessage()).isEqualTo("잘못된 API 키입니다. 발급된 키를 확인하세요.");
+    }
+
+    @Test
+    void signup_fail_no_authorization_ip() throws Exception {
+        // given
+        UserSignupRequest request = new UserSignupRequest("test1", "test1password", "nick1", "secret", "access");
+        String accountUrl = "https://api.upbit.com/v1/accounts";
+        when(userRepository.findByUserId(request.getUserId())).thenReturn(Optional.empty());
+
+        when(restTemplate.exchange(
+                eq(accountUrl),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class)
+        )).thenThrow(HttpClientErrorException.create(
+                HttpStatus.UNAUTHORIZED,
+                "Unauthorized",
+                HttpHeaders.EMPTY,
+                "{\"error\":{\"name\":\"no_authorization_ip\"}}".getBytes(StandardCharsets.UTF_8),
+                StandardCharsets.UTF_8 // 인코딩
+        ));
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class, () -> userService.signup(request));
+        assertThat(exception.getMessage()).isEqualTo("허용되지 않은 IP입니다, 서버 IP로 키를 재발급해주세요.");
     }
 
     @Test

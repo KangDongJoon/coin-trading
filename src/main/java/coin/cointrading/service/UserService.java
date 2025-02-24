@@ -1,5 +1,6 @@
 package coin.cointrading.service;
 
+import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.User;
 import coin.cointrading.dto.LoginRequest;
 import coin.cointrading.dto.UserSignupRequest;
@@ -9,9 +10,15 @@ import coin.cointrading.repository.UserRepository;
 import coin.cointrading.util.AES256Util;
 import coin.cointrading.util.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Optional;
 
@@ -24,6 +31,7 @@ public class UserService {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
     private final AES256Util aes256Util;
+    private final RestTemplate restTemplate;
 
     @Transactional
     public void signup(UserSignupRequest request) throws Exception {
@@ -38,6 +46,29 @@ public class UserService {
         // API키 암호화
         String encodeSecret = aes256Util.encrypt(request.getSecretKey());
         String encodeAccess = aes256Util.encrypt(request.getAccessKey());
+
+        AuthUser authUser = new AuthUser(request.getUserId(), request.getUserNickname(), encodeSecret, encodeAccess);
+
+        // API키 확인
+        String accountUrl = "https://api.upbit.com/v1/accounts";
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Content-Type", "application/json");
+        headers.set("Authorization", jwtTokenProvider.createAccountToken(authUser));
+        HttpEntity<?> entity = new HttpEntity<>(headers);
+        try {
+            restTemplate.exchange(accountUrl, HttpMethod.GET, entity, String.class);
+        } catch (HttpClientErrorException e) {
+            String responseBody = e.getResponseBodyAsString();
+            if (responseBody.contains("invalid_")) {
+                throw new CustomException(ErrorCode.AUTH_INVALID_API_KEY);
+            } else if (responseBody.contains("no_authorization_ip")) {
+                throw new CustomException(ErrorCode.AUTH_NO_AUTHORIZATION_IP);
+            }
+        } catch (Exception e) {
+            // 기타 예외 처리
+            throw new RuntimeException("Upbit API 요청 실패: " + e.getMessage());
+        }
+
 
         // 유저 객체 생성
         User user = new User(
