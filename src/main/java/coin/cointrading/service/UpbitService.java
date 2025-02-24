@@ -64,13 +64,10 @@ public class UpbitService {
 
         // enum
         String side;
-        if (decision.equals("buy")) {
-            side = "bid";
-        } else if (decision.equals("sell")) {
-            side = "ask";
-        } else {
-            return null;
-        }
+        if (decision.equals("buy")) side = "bid";
+        else if (decision.equals("sell")) side = "ask";
+        else return null;
+
 
         double balance = Math.floor(Double.parseDouble(KRW.getBalance()) * 0.9995);
         String price = Double.toString(balance);
@@ -82,11 +79,8 @@ public class UpbitService {
         params.put("side", side);
         params.put("ord_type", ord_type);
 
-        if (side.equals("bid")) {
-            params.put("price", price);
-        } else {
-            params.put("volume", volume);
-        }
+        if (side.equals("bid")) params.put("price", price);
+        else params.put("volume", volume);
 
         String orderUrl = serverUrl + "/v1/orders";
         HttpHeaders headers = new HttpHeaders();
@@ -137,9 +131,7 @@ public class UpbitService {
 
         // try-with-resources를 사용하여 자동으로 response 닫기
         try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                throw new IOException("Unexpected code " + response);
-            }
+            if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
 
             String jsonResponse = response.body().string();
             ObjectMapper objectMapper = new ObjectMapper();

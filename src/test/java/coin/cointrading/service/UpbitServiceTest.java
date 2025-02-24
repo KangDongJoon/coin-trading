@@ -2,6 +2,7 @@ package coin.cointrading.service;
 
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.dto.AccountResponse;
+import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.util.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -91,4 +94,48 @@ class UpbitServiceTest {
         assertThat(result2.get(1).getBalance()).isEqualTo("1.0");
         assertThat(result2.get(1).getAvgBuyPrice()).isEqualTo("10000000");
     }
+
+    @Test
+    void order_buy_success() throws Exception {
+        // given
+        AuthUser authUser1 = new AuthUser("user1", "nick1", "secret1", "access1");
+        String decision = "buy";
+        double ETH_Price = 1000000;
+        List<AccountResponse> accounts = new ArrayList<>();
+        AccountResponse buyAccount = new AccountResponse("KRW", "100000.0", "0.0", "0", false, "KRW");
+        accounts.add(buyAccount);
+        ResponseEntity<List<AccountResponse>> responseEntity1 = new ResponseEntity<>(accounts, HttpStatus.OK);
+        when(restTemplate.exchange(
+                eq(serverUrl + "/v1/accounts"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                any(ParameterizedTypeReference.class))
+        ).thenReturn(responseEntity1);
+        when(jwtTokenProvider.createOrderToken(any(HashMap.class), eq(authUser1))).thenReturn("mockToken");
+
+        double volume = Math.floor(Double.parseDouble(buyAccount.getBalance()) * 0.995) / ETH_Price;
+        OrderResponse orderResponse = new OrderResponse(
+                "KRW-ETH",
+                "bid",
+                Double.toString(ETH_Price),
+                Double.toString(volume),
+                Double.toString(volume),
+                "0"
+        );
+        ResponseEntity<OrderResponse> responseEntity = ResponseEntity.ok(orderResponse);
+
+        when(restTemplate.exchange(
+                eq(serverUrl + "/v1/orders"),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(new ParameterizedTypeReference<OrderResponse>() {
+                })
+        )).thenReturn(responseEntity);
+
+        // when
+        OrderResponse result = upbitService.orderCoins(decision, authUser1);
+        // then
+        assertThat(result.getExecutedVolume()).isEqualTo(Double.toString(volume));
+    }
+
 }
