@@ -18,12 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.LocalTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -33,11 +31,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Transactional(readOnly = true)
 public class TradingService {
 
-    private final ConcurrentHashMap<String, Future<?>> userTrades = new ConcurrentHashMap<>();
-    private final ExecutorService executorService = Executors.newCachedThreadPool();
+    private final ConcurrentHashMap<String, Future<?>> userTrades;
+    private final ExecutorService executorService;
+    private final Map<String, AtomicBoolean> userRunningStatus;
     private final BackDataRepository backDataRepository;
     private final UpbitService upbitService;
-    private final Map<String, AtomicBoolean> userRunningStatus = new HashMap<>();
 
     // 프로그램 실행
     public void startTrading(AuthUser authUser) {
@@ -81,7 +79,6 @@ public class TradingService {
         // 작업 종료
         try {
             future.cancel(true);
-            userRunningStatus.remove(userId);
             log.info("{}의 거래 프로그램이 정상적으로 종료되었습니다.", userId);
         } catch (Exception e) {
             log.info("프로그램 종료 중 오류 발생: {}", e.getMessage());
