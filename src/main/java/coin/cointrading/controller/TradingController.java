@@ -2,7 +2,6 @@ package coin.cointrading.controller;
 
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.BackData;
-import coin.cointrading.dto.AccountResponse;
 import coin.cointrading.service.TradingService;
 import coin.cointrading.service.UpbitService;
 import lombok.RequiredArgsConstructor;
@@ -25,20 +24,20 @@ public class TradingController {
     private final UpbitService upbitService;
 
     @GetMapping("/v1/accounts")
-    public ResponseEntity<List<AccountResponse>> getAccount(@AuthenticationPrincipal AuthUser authUser) throws Exception {
+    public ResponseEntity<Object> getAccount(@AuthenticationPrincipal AuthUser authUser) throws Exception {
         return ResponseEntity.ok(upbitService.getAccount(authUser));
     }
 
-    @PostMapping("/v1/starts")
-    public String startProgram(@AuthenticationPrincipal AuthUser authUser) {
-        try {
-            // executeTrade 메서드 비동기 호출
-            tradingService.startTrading(authUser);
-            return "매매 프로그램이 정상적으로 실행되었습니다.";
-        } catch (Exception e) {
-            return "매매 프로그램 실행 중 오류가 발생했습니다: " + e.getMessage();
-        }
-    }
+//    @PostMapping("/v1/starts")
+//    public String startProgram(@AuthenticationPrincipal AuthUser authUser) {
+//        try {
+//            // executeTrade 메서드 비동기 호출
+//            tradingService.startTrading(authUser);
+//            return "매매 프로그램이 정상적으로 실행되었습니다.";
+//        } catch (Exception e) {
+//            return "매매 프로그램 실행 중 오류가 발생했습니다: " + e.getMessage();
+//        }
+//    }
 
     @PostMapping("/v1/stops")
     public void stopProgram(@AuthenticationPrincipal AuthUser authUser) {
@@ -67,6 +66,12 @@ public class TradingController {
     @GetMapping("/v1/backdata")
     public List<BackData> getBackData() {
         return tradingService.getBackData();
+    }
+
+    @PostMapping("/v1/orders")
+    public ResponseEntity<Object> orders(@AuthenticationPrincipal AuthUser authUser) throws Exception {
+        String decision = "sell";
+        return ResponseEntity.ok(upbitService.orderCoins(decision, authUser));
     }
 }
 

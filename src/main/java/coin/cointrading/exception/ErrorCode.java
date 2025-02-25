@@ -14,7 +14,9 @@ public enum ErrorCode {
     AUTH_EXIST_ID(HttpStatus.CONFLICT, "이미 가입된 ID입니다."),
     AUTH_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지않는 ID입니다."),
     AUTH_INVALID_API_KEY(HttpStatus.UNAUTHORIZED, "잘못된 API 키입니다. 발급된 키를 확인하세요."),
-    AUTH_NO_AUTHORIZATION_IP(HttpStatus.UNAUTHORIZED, "허용되지 않은 IP입니다, 서버 IP로 키를 재발급해주세요.");
+    AUTH_NO_AUTHORIZATION_IP(HttpStatus.UNAUTHORIZED, "허용되지 않은 IP입니다, 서버 IP로 키를 재발급해주세요."),
+
+    COMMON_INVALID_TYPE(HttpStatus.BAD_REQUEST, "잘못된 타입 매치 입니다.");
 
     private final HttpStatus status;
     private final String message;
