@@ -28,16 +28,16 @@ public class TradingController {
         return ResponseEntity.ok(upbitService.getAccount(authUser));
     }
 
-//    @PostMapping("/v1/starts")
-//    public String startProgram(@AuthenticationPrincipal AuthUser authUser) {
-//        try {
-//            // executeTrade 메서드 비동기 호출
-//            tradingService.startTrading(authUser);
-//            return "매매 프로그램이 정상적으로 실행되었습니다.";
-//        } catch (Exception e) {
-//            return "매매 프로그램 실행 중 오류가 발생했습니다: " + e.getMessage();
-//        }
-//    }
+    @PostMapping("/v1/starts")
+    public String startProgram(@AuthenticationPrincipal AuthUser authUser) {
+        try {
+            // executeTrade 메서드 비동기 호출
+            tradingService.startTrading(authUser);
+            return "매매 프로그램이 정상적으로 실행되었습니다.";
+        } catch (Exception e) {
+            return "매매 프로그램 실행 중 오류가 발생했습니다: " + e.getMessage();
+        }
+    }
 
     @PostMapping("/v1/stops")
     public void stopProgram(@AuthenticationPrincipal AuthUser authUser) {

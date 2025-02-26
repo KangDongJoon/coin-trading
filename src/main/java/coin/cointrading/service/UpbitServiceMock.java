@@ -90,8 +90,6 @@ public class UpbitServiceMock implements UpbitService {
                 HttpMethod.POST,
                 entity,
                 new ParameterizedTypeReference<Map<String, Object>>() {
-                }
-        ).getBody();
+                }).getBody();
     }
-
 }
