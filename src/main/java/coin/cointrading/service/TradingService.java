@@ -36,6 +36,7 @@ public class TradingService {
     private final Map<String, AtomicBoolean> userRunningStatus;
     private final BackDataRepository backDataRepository;
     private final UpbitService upbitService;
+    private final UpbitCandleService upbitCandleService;
 
     // 프로그램 실행
     public void startTrading(AuthUser authUser) {
@@ -89,7 +90,7 @@ public class TradingService {
         AtomicBoolean running = userRunningStatus.get(authUser.getUserId());
         log.info("프로그램 동작 시작 for user: {}", authUser.getUserId());
 
-        double todayTarget = upbitService.checkTarget(); // 당일 목표가
+        double todayTarget = upbitCandleService.checkTarget(); // 당일 목표가
         boolean op_mode = false; // 시작하는 날 매수하지않기
         boolean hold = false; // 이미 매수한 상태라면 매수시도 하지않기(true = 매수, false = 매도)
         boolean stopLossExecuted = false; // 손절 여부 추적
@@ -98,11 +99,14 @@ public class TradingService {
         while (running.get()) {
             log.info("사용자: {}", authUser.getUserId());
             LocalTime now = LocalTime.now(); // 현재시간
-            double current = upbitService.current(); // 현재가
+            double current = upbitCandleService.current(); // 현재가
+            double locked = 0;
+            double sellLocked = 0;
+
             // 목표가 지정 9시 00분 20 ~ 30초 사이
             if (now.getHour() == 9 && now.getMinute() == 0 && (20 < now.getSecond() && 30 > now.getSecond())) {
                 try {
-                    todayTarget = upbitService.checkTarget(); // 목표가 갱신
+                    todayTarget = upbitCandleService.checkTarget(); // 목표가 갱신
                     log.info("목표가 갱신: {}", todayTarget);
                     op_mode = true;
                     stopLossExecuted = false;
@@ -115,22 +119,31 @@ public class TradingService {
             // 매수 로직
             if (op_mode && !hold && current >= todayTarget && !stopLossExecuted) {
                 // 매수 api
-                OrderResponse orderResponse = upbitService.orderCoins("buy", authUser);
+                OrderResponse orderResponse = (OrderResponse) upbitService.orderCoins("buy", authUser);
                 hold = true;
-                log.info("매수 수량: {}", orderResponse.getVolume());
+                Thread.sleep(3000);
+
+                locked = Math.round(Double.parseDouble(orderResponse.getLocked()));
+                log.info("매수 금액: {}", locked);
             }
 
             // 매도 로직
             if (op_mode && hold && now.getHour() == 8 && now.getMinute() == 59 && (now.getSecond() >= 50 && now.getSecond() <= 59)) {
                 try {
                     // 매도 api
-                    OrderResponse orderResponse = upbitService.orderCoins("sell", authUser);
+                    upbitService.orderCoins("sell", authUser);
                     hold = false;
                     op_mode = false;
-                    double ror = ((Integer.parseInt(orderResponse.getPrice()) - todayTarget) / todayTarget) * 100;
-                    ror = Math.round(ror * 10.0) / 10.0; // 소수점 한 자리까지 반올림
-                    log.info("매도 수익률: {}%", ror);
+
                     Thread.sleep(10000);
+
+                    List<Map<String, Object>> orders = (List<Map<String, Object>>) upbitService.getOrders(authUser, 1);
+                    Map<String, Object> order = orders.get(0);
+                    Double executed_funds = Double.parseDouble((String) order.get("executed_funds"));
+                    Double paid_fee = Double.parseDouble((String) order.get("paid_fee"));
+                    sellLocked = Math.round(executed_funds - paid_fee);
+                    double ror = Math.round((sellLocked - locked) / locked * 10.0) / 10.0;
+                    log.info("매도 수익률: {}%", ror);
                 } catch (InterruptedException e) {
                     break;
                 } catch (Exception e) {

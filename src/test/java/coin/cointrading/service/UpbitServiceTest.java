@@ -2,11 +2,12 @@ package coin.cointrading.service;
 
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.dto.AccountResponse;
-import coin.cointrading.dto.OrderResponse;
+import coin.cointrading.dto.TestOrderResponse;
 import coin.cointrading.util.JwtTokenProvider;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.core.ParameterizedTypeReference;
@@ -16,9 +17,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,8 +27,6 @@ import static org.mockito.Mockito.when;
 
 class UpbitServiceTest {
 
-
-    @InjectMocks
     UpbitService upbitService;
 
     @Mock
@@ -42,6 +40,7 @@ class UpbitServiceTest {
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);
+        upbitService = new UpbitServiceMock(jwtTokenProvider, restTemplate);
     }
 
     @Test
@@ -54,45 +53,71 @@ class UpbitServiceTest {
         String requestUrl = serverUrl + "/v1/accounts";
         when(jwtTokenProvider.createAccountToken(authUser1)).thenReturn(fakeToken1);
         when(jwtTokenProvider.createAccountToken(authUser2)).thenReturn(fakeToken2);
-        List<AccountResponse> user1Account = List.of(
-                new AccountResponse("KRW", "80000.0", "0.0", "0", false, "KRW"),
-                new AccountResponse("ETH", "2.0", "0.0", "100000", false, "KRW")
-        );
-        List<AccountResponse> user2Account = List.of(
-                new AccountResponse("KRW", "100000.0", "0.0", "0", false, "KRW"),
-                new AccountResponse("BTC", "1.0", "0.0", "10000000", false, "KRW"),
-                new AccountResponse("ETH", "2.0", "0.0", "100000", false, "KRW")
+
+        List<Map<String, Object>> accounts1 = List.of(
+                Map.of(
+                        "currency", "KRW",
+                        "balance", "1000000.0",
+                        "locked", "0.0",
+                        "avg_buy_price", "0",
+                        "avg_buy_price_modified", false,
+                        "unit_currency", "KRW"
+                ),
+                Map.of(
+                        "currency", "BTC",
+                        "balance", "2.0",
+                        "locked", "0.0",
+                        "avg_buy_price", "10000000",
+                        "avg_buy_price_modified", false,
+                        "unit_currency", "KRW"
+                )
         );
 
-        ResponseEntity<List<AccountResponse>> responseEntity1 = new ResponseEntity<>(user1Account, HttpStatus.OK);
-        ResponseEntity<List<AccountResponse>> responseEntity2 = new ResponseEntity<>(user2Account, HttpStatus.OK);
+        List<Map<String, Object>> accounts2 = List.of(
+                Map.of(
+                        "currency", "KRW",
+                        "balance", "500000.0",
+                        "locked", "0.0",
+                        "avg_buy_price", "0",
+                        "avg_buy_price_modified", false,
+                        "unit_currency", "KRW"
+                ),
+                Map.of(
+                        "currency", "ETH",
+                        "balance", "1.0",
+                        "locked", "0.0",
+                        "avg_buy_price", "1000000",
+                        "avg_buy_price_modified", false,
+                        "unit_currency", "KRW"
+                )
+        );
+
         when(restTemplate.exchange(
                 eq(requestUrl),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
-                any(ParameterizedTypeReference.class))
-        ).thenReturn(responseEntity1)
-                .thenReturn(responseEntity2);
-        // when
-        List<AccountResponse> result1 = upbitService.getAccount(authUser1);
-        List<AccountResponse> result2 = upbitService.getAccount(authUser2);
+                any(ParameterizedTypeReference.class)
+        )).thenReturn(new ResponseEntity<>(accounts1, HttpStatus.OK))
+                .thenReturn(new ResponseEntity<>(accounts2, HttpStatus.OK));
 
+        // when
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<AccountResponse> result1 = objectMapper.convertValue(upbitService.getAccount(authUser1), new TypeReference<>() {
+        });
+        List<AccountResponse> result2 = objectMapper.convertValue(upbitService.getAccount(authUser2), new TypeReference<>() {
+        });
 
         // then
-        // user1 계좌 확인
-        assertThat(result1.size()).isEqualTo(2);
-        assertThat(result1.get(0).getCurrency()).isEqualTo("KRW");
-        assertThat(result1.get(0).getBalance()).isEqualTo("80000.0");
-        assertThat(result1.get(1).getCurrency()).isEqualTo("ETH");
-        assertThat(result1.get(1).getBalance()).isEqualTo("2.0");
-        assertThat(result1.get(1).getAvgBuyPrice()).isEqualTo("100000");
-        // user2 계좌 확인
-        assertThat(result2.size()).isEqualTo(3);
-        assertThat(result2.get(0).getCurrency()).isEqualTo("KRW");
-        assertThat(result2.get(0).getBalance()).isEqualTo("100000.0");
-        assertThat(result2.get(1).getCurrency()).isEqualTo("BTC");
-        assertThat(result2.get(1).getBalance()).isEqualTo("1.0");
-        assertThat(result2.get(1).getAvgBuyPrice()).isEqualTo("10000000");
+        assertThat(result1.get(0).getCurrency()).isEqualTo(accounts1.get(0).get("currency")); // KRW
+        assertThat(result1.get(0).getBalance()).isEqualTo(accounts1.get(0).get("balance")); // 1000000.0
+        assertThat(result1.get(1).getCurrency()).isEqualTo(accounts1.get(1).get("currency")); // BTC
+        assertThat(result1.get(1).getBalance()).isEqualTo(accounts1.get(1).get("balance")); // 2.0
+        assertThat(result1.get(1).getAvgBuyPrice()).isEqualTo(accounts1.get(1).get("avg_buy_price")); // 10000000
+        assertThat(result2.get(0).getCurrency()).isEqualTo(accounts2.get(0).get("currency")); // KRW
+        assertThat(result2.get(0).getBalance()).isEqualTo(accounts2.get(0).get("balance")); // 500000.0
+        assertThat(result2.get(1).getCurrency()).isEqualTo(accounts2.get(1).get("currency")); // ETH
+        assertThat(result2.get(1).getBalance()).isEqualTo(accounts2.get(1).get("balance")); // 1.0
+        assertThat(result2.get(1).getAvgBuyPrice()).isEqualTo(accounts2.get(1).get("avg_buy_price")); // 1000000
     }
 
     @Test
@@ -100,42 +125,146 @@ class UpbitServiceTest {
         // given
         AuthUser authUser1 = new AuthUser("user1", "nick1", "secret1", "access1");
         String decision = "buy";
-        double ETH_Price = 1000000;
-        List<AccountResponse> accounts = new ArrayList<>();
-        AccountResponse buyAccount = new AccountResponse("KRW", "100000.0", "0.0", "0", false, "KRW");
-        accounts.add(buyAccount);
-        ResponseEntity<List<AccountResponse>> responseEntity1 = new ResponseEntity<>(accounts, HttpStatus.OK);
+        String requestUrl = serverUrl + "/v1/orders";
+
+        // 계좌 정보 mock 설정
+        List<Map<String, Object>> accounts1 = List.of(
+                Map.of(
+                        "currency", "KRW",
+                        "balance", "1000000.0",
+                        "locked", "0.0",
+                        "avg_buy_price", "0",
+                        "avg_buy_price_modified", false,
+                        "unit_currency", "KRW"
+                ),
+                Map.of(
+                        "currency", "BTC",
+                        "balance", "2.0",
+                        "locked", "0.0",
+                        "avg_buy_price", "10000000",
+                        "avg_buy_price_modified", false,
+                        "unit_currency", "KRW"
+                )
+        );
+
         when(restTemplate.exchange(
                 eq(serverUrl + "/v1/accounts"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
-                any(ParameterizedTypeReference.class))
-        ).thenReturn(responseEntity1);
-        when(jwtTokenProvider.createOrderToken(any(HashMap.class), eq(authUser1))).thenReturn("mockToken");
+                any(ParameterizedTypeReference.class)
+        )).thenReturn(new ResponseEntity<>(accounts1, HttpStatus.OK));
+        when(upbitService.getAccount(authUser1)).thenReturn(new ResponseEntity<>(accounts1, HttpStatus.OK));
 
-        double volume = Math.floor(Double.parseDouble(buyAccount.getBalance()) * 0.995) / ETH_Price;
-        OrderResponse orderResponse = new OrderResponse(
-                "KRW-ETH",
-                "bid",
-                Double.toString(ETH_Price),
-                Double.toString(volume),
-                Double.toString(volume),
-                "0"
+        double ETH_Price = 1000000;
+        double price = (Double.parseDouble(accounts1.get(0).get("balance").toString()) * 0.9995);
+        double volume = price / ETH_Price;
+        // 주문 mock 데이터
+        Map<String, Object> order1 = Map.ofEntries(
+                Map.entry("uuid", "cdd92199-2897-4e14-9448-f923320408ad"),
+                Map.entry("side", "bid"),
+                Map.entry("ord_type", "limit"),
+                Map.entry("price", Double.toString(price)),
+                Map.entry("state", "wait"),
+                Map.entry("market", "KRW-ETH"),
+                Map.entry("created_at", "2018-04-10T15:42:23+09:00"),
+                Map.entry("volume", Double.toString(volume)),
+                Map.entry("remaining_volume", "0.01"),
+                Map.entry("reserved_fee", "0.0005"),
+                Map.entry("remaining_fee", "0.0005"),
+                Map.entry("paid_fee", "0.0"),
+                Map.entry("locked", "0"),
+                Map.entry("executed_volume", "0.0"),
+                Map.entry("trades_count", 0)
         );
-        ResponseEntity<OrderResponse> responseEntity = ResponseEntity.ok(orderResponse);
 
         when(restTemplate.exchange(
-                eq(serverUrl + "/v1/orders"),
+                eq(requestUrl),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
-                eq(new ParameterizedTypeReference<OrderResponse>() {
-                })
-        )).thenReturn(responseEntity);
+                any(ParameterizedTypeReference.class)
+        )).thenReturn(new ResponseEntity<>(order1, HttpStatus.OK));
 
         // when
-        OrderResponse result = upbitService.orderCoins(decision, authUser1);
+        ObjectMapper objectMapper = new ObjectMapper();
+        TestOrderResponse result1 = objectMapper.convertValue(upbitService.orderCoins(decision, authUser1), new TypeReference<>() {});
+
         // then
-        assertThat(result.getExecutedVolume()).isEqualTo(Double.toString(volume));
+        assertThat(result1.getMarket()).isEqualTo(order1.get("market")); // KRW-ETH
+        assertThat(result1.getVolume()).isEqualTo(order1.get("volume")); // 0.09995
+        assertThat(result1.getSide()).isEqualTo(order1.get("side")); // bid
     }
 
+    @Test
+    void order_sell_success() throws Exception {
+        // given
+        AuthUser authUser1 = new AuthUser("user1", "nick1", "secret1", "access1");
+        String decision = "sell";
+        String requestUrl = serverUrl + "/v1/orders";
+
+        // 계좌 정보 mock 설정
+        List<Map<String, Object>> accounts1 = List.of(
+                Map.of(
+                        "currency", "KRW",
+                        "balance", "1000000.0",
+                        "locked", "0.0",
+                        "avg_buy_price", "0",
+                        "avg_buy_price_modified", false,
+                        "unit_currency", "KRW"
+                ),
+                Map.of(
+                        "currency", "ETH",
+                        "balance", "1.15",
+                        "locked", "0.0",
+                        "avg_buy_price", "1000000",
+                        "avg_buy_price_modified", false,
+                        "unit_currency", "KRW"
+                )
+        );
+
+        when(restTemplate.exchange(
+                eq(serverUrl + "/v1/accounts"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                any(ParameterizedTypeReference.class)
+        )).thenReturn(new ResponseEntity<>(accounts1, HttpStatus.OK));
+        when(upbitService.getAccount(authUser1)).thenReturn(new ResponseEntity<>(accounts1, HttpStatus.OK));
+
+        String ETH_Price = "1200000.0";
+        String volume = accounts1.get(1).get("balance").toString();
+        double price = (Double.parseDouble(accounts1.get(0).get("balance").toString()) * 0.9995);
+        // 주문 mock 데이터
+        Map<String, Object> order1 = Map.ofEntries(
+                Map.entry("uuid", "cdd92199-2897-4e14-9448-f923320408ad"),
+                Map.entry("side", "ask"),
+                Map.entry("ord_type", "limit"),
+                Map.entry("price", ETH_Price),
+                Map.entry("state", "wait"),
+                Map.entry("market", "KRW-ETH"),
+                Map.entry("created_at", "2018-04-10T15:42:23+09:00"),
+                Map.entry("volume", volume),
+                Map.entry("remaining_volume", "0.01"),
+                Map.entry("reserved_fee", "0.0005"),
+                Map.entry("remaining_fee", "0.0005"),
+                Map.entry("paid_fee", "0.0"),
+                Map.entry("locked", "0"),
+                Map.entry("executed_volume", "0.0"),
+                Map.entry("trades_count", 0)
+        );
+
+        when(restTemplate.exchange(
+                eq(requestUrl),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                any(ParameterizedTypeReference.class)
+        )).thenReturn(new ResponseEntity<>(order1, HttpStatus.OK));
+
+        // when
+        ObjectMapper objectMapper = new ObjectMapper();
+        TestOrderResponse result1 = objectMapper.convertValue(upbitService.orderCoins(decision, authUser1), new TypeReference<>() {});
+
+        // then
+        assertThat(result1.getMarket()).isEqualTo(order1.get("market")); // KRW-ETH
+        assertThat(result1.getVolume()).isEqualTo(order1.get("volume")); // 1.15
+        assertThat(result1.getSide()).isEqualTo(order1.get("side")); // ask
+    }
 }

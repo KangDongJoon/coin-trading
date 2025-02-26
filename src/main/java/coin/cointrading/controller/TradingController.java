@@ -2,7 +2,6 @@ package coin.cointrading.controller;
 
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.BackData;
-import coin.cointrading.dto.AccountResponse;
 import coin.cointrading.service.TradingService;
 import coin.cointrading.service.UpbitService;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -25,7 +25,7 @@ public class TradingController {
     private final UpbitService upbitService;
 
     @GetMapping("/v1/accounts")
-    public ResponseEntity<List<AccountResponse>> getAccount(@AuthenticationPrincipal AuthUser authUser) throws Exception {
+    public ResponseEntity<Object> getAccount(@AuthenticationPrincipal AuthUser authUser) throws Exception {
         return ResponseEntity.ok(upbitService.getAccount(authUser));
     }
 
@@ -67,6 +67,17 @@ public class TradingController {
     @GetMapping("/v1/backdata")
     public List<BackData> getBackData() {
         return tradingService.getBackData();
+    }
+
+    @PostMapping("/v1/orders")
+    public ResponseEntity<Object> getOrders(@AuthenticationPrincipal AuthUser authUser) throws Exception {
+        String decision = "sell";
+        return ResponseEntity.ok(upbitService.orderCoins(decision, authUser));
+    }
+
+    @GetMapping("/v1/orders/close")
+    public ResponseEntity<Object> getOrders(@AuthenticationPrincipal AuthUser authUser, @RequestParam int count) {
+        return ResponseEntity.ok(upbitService.getOrders(authUser, count));
     }
 }
 
