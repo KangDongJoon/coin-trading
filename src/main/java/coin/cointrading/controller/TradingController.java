@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -69,9 +70,14 @@ public class TradingController {
     }
 
     @PostMapping("/v1/orders")
-    public ResponseEntity<Object> orders(@AuthenticationPrincipal AuthUser authUser) throws Exception {
+    public ResponseEntity<Object> getOrders(@AuthenticationPrincipal AuthUser authUser) throws Exception {
         String decision = "sell";
         return ResponseEntity.ok(upbitService.orderCoins(decision, authUser));
+    }
+
+    @GetMapping("/v1/orders/close")
+    public ResponseEntity<Object> getOrders(@AuthenticationPrincipal AuthUser authUser, @RequestParam int count) {
+        return ResponseEntity.ok(upbitService.getOrders(authUser, count));
     }
 }
 

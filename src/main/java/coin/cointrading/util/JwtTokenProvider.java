@@ -9,12 +9,9 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 @Component
@@ -25,7 +22,6 @@ public class JwtTokenProvider {
     private String secretKey;
     @Value("${jwt.secret.key}")
     private String jwtSecretKey;
-    private static final String BEARER_PREFIX = "Bearer ";
     private final AES256Util aes256Util;
 
     public String createLoginToken(String userId, String userNickname, String upbitSecretKey, String upbitAccessKey) {
@@ -85,12 +81,32 @@ public class JwtTokenProvider {
         return "Bearer " + jwtToken;
     }
 
-    public String substringToken(String tokenValue) {
-        if (StringUtils.hasText(tokenValue) && tokenValue.startsWith(BEARER_PREFIX)) {
-            return tokenValue.substring(7);
-        }
-        throw new NoSuchElementException("Not Found Token");
+    public String createGetOrderToken(String queryString, AuthUser authUser) throws Exception {
+        secretKey = aes256Util.decrypt(authUser.getUpbitSecretKey());
+        accessKey = aes256Util.decrypt(authUser.getUpbitAccessKey());
+
+        MessageDigest md = MessageDigest.getInstance("SHA-512");
+        md.update(queryString.getBytes("UTF-8"));
+
+        String queryHash = String.format("%0128x", new BigInteger(1, md.digest()));
+
+        Algorithm algorithm = Algorithm.HMAC256(secretKey);
+        String jwtToken = JWT.create()
+                .withClaim("access_key", accessKey)
+                .withClaim("nonce", UUID.randomUUID().toString())
+                .withClaim("query_hash", queryHash)
+                .withClaim("query_hash_alg", "SHA512")
+                .sign(algorithm);
+
+        return  "Bearer " + jwtToken;
     }
+
+//    public String substringToken(String tokenValue) {
+//        if (StringUtils.hasText(tokenValue) && tokenValue.startsWith(BEARER_PREFIX)) {
+//            return tokenValue.substring(7);
+//        }
+//        throw new NoSuchElementException("Not Found Token");
+//    }
 
     public DecodedJWT extractClaims(String token) {
         try {

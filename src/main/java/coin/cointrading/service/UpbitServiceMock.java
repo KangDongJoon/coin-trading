@@ -92,4 +92,9 @@ public class UpbitServiceMock implements UpbitService {
                 new ParameterizedTypeReference<Map<String, Object>>() {
                 }).getBody();
     }
+
+    @Override
+    public Object getOrders(AuthUser authUser, int count) {
+        return null;
+    }
 }

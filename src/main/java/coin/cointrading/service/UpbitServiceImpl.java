@@ -15,8 +15,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -89,5 +91,46 @@ public class UpbitServiceImpl implements UpbitService {
                 entity,
                 new ParameterizedTypeReference<OrderResponse>() {
                 }).getBody();
+    }
+
+    @Override
+    public Object getOrders(AuthUser authUser, int count) {
+        HashMap<String, String> params = new HashMap<>();
+        params.put("market", "KRW-ETH");
+
+        String limit = "limit=" + count;
+        String[] states = {
+                "done",
+                "cancel"
+        };
+
+        ArrayList<String> queryElements = new ArrayList<>();
+        for(Map.Entry<String, String> entity : params.entrySet()) {
+            queryElements.add(entity.getKey() + "=" + entity.getValue());
+        }
+        for(String state : states) {
+            queryElements.add("states[]=" + state);
+        }
+        queryElements.add(limit);
+
+        String queryString = String.join("&", queryElements.toArray(new String[0]));
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Content-Type", "application/json");
+            headers.set("Authorization", jwtTokenProvider.createGetOrderToken(queryString, authUser));
+            HttpEntity<?> entity = new HttpEntity<>(headers);
+
+            return restTemplate.exchange(
+                    serverUrl + "/v1/orders/closed?" + queryString,
+                    HttpMethod.GET,
+                    entity,
+                    new ParameterizedTypeReference<List<Map<String, Object>>>() {
+                    }
+            ).getBody();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
