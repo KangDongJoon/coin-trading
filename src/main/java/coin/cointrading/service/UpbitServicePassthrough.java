@@ -20,8 +20,8 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Qualifier("mock")
-public class UpbitServiceMock implements UpbitService {
+@Qualifier("passthrough")
+public class UpbitServicePassthrough implements UpbitService {
 
     private final String serverUrl = "https://api.upbit.com";
     private final JwtTokenProvider jwtTokenProvider;

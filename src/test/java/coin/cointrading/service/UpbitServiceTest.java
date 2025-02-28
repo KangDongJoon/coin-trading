@@ -40,11 +40,11 @@ class UpbitServiceTest {
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);
-        upbitService = new UpbitServiceMock(jwtTokenProvider, restTemplate);
+        upbitService = new UpbitServicePassthrough(jwtTokenProvider, restTemplate);
     }
 
     @Test
-    void getAccount_success() throws Exception {
+    void getAccount_transform_success() throws Exception {
         // given
         AuthUser authUser1 = new AuthUser("user1", "nick1", "secret1", "access1");
         AuthUser authUser2 = new AuthUser("user2", "nick2", "secret2", "access2");
@@ -121,7 +121,7 @@ class UpbitServiceTest {
     }
 
     @Test
-    void order_buy_success() throws Exception {
+    void order_buy_transform_success() throws Exception {
         // given
         AuthUser authUser1 = new AuthUser("user1", "nick1", "secret1", "access1");
         String decision = "buy";
@@ -195,7 +195,7 @@ class UpbitServiceTest {
     }
 
     @Test
-    void order_sell_success() throws Exception {
+    void order_sell_transform_success() throws Exception {
         // given
         AuthUser authUser1 = new AuthUser("user1", "nick1", "secret1", "access1");
         String decision = "sell";

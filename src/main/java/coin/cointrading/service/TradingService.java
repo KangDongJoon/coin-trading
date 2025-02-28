@@ -97,7 +97,6 @@ public class TradingService {
 
         LocalTime alarmTime = LocalTime.now().plusMinutes(30);
         while (running.get()) {
-            log.info("사용자: {}", authUser.getUserId());
             LocalTime now = LocalTime.now(); // 현재시간
             double current = upbitCandleService.current(); // 현재가
             double locked = 0;

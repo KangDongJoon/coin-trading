@@ -1,6 +1,7 @@
 package coin.cointrading.service;
 
 import coin.cointrading.domain.AuthUser;
+import coin.cointrading.dto.UpbitCandle;
 import coin.cointrading.repository.BackDataRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,8 +26,12 @@ class TradingServiceTest {
 
     @Mock
     private BackDataRepository backDataRepository;
+
     @Mock
     private UpbitService upbitService;
+
+    @Mock
+    private UpbitCandleService upbitCandleService;
 
     @InjectMocks
     private TradingService tradingService;
@@ -37,7 +42,7 @@ class TradingServiceTest {
         userTrades = new ConcurrentHashMap<>();
         executorService = Executors.newFixedThreadPool(2); // 2개의 스레드 풀 생성
         userRunningStatus = new ConcurrentHashMap<>();
-        tradingService = new TradingService(userTrades, executorService, userRunningStatus, backDataRepository, upbitService);
+        tradingService = new TradingService(userTrades, executorService, userRunningStatus, backDataRepository, upbitService, upbitCandleService);
     }
 
     @Test
