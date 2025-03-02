@@ -25,27 +25,33 @@ public class RedisService {
     @Scheduled(fixedRate = 1000)
     public void updatePriceCache() throws IOException {
         double currentPrice = upbitCandleService.current();
-        redisTemplate.opsForValue().set("CURRENT_PRICE", String.valueOf(currentPrice), Duration.ofSeconds(3));
+
+        redisTemplate.opsForValue().getAndSet("CURRENT_PRICE", String.valueOf(currentPrice));
+
+        redisTemplate.expire("CURRENT_PRICE", Duration.ofSeconds(3));
     }
+
 
     public double getCurrentPrice() {
         String cachedPrice = redisTemplate.opsForValue().get("CURRENT_PRICE");
         if (cachedPrice != null) {
             return Double.parseDouble(cachedPrice);
         }
+        log.error("{}", ErrorCode.REDIS_NOT_FOUND.getMessage());
         throw new CustomException(ErrorCode.REDIS_NOT_FOUND);
     }
 
-    // second, minute, hour, day of month, month, day of week
+
     @Scheduled(cron = "20 0 9 * * ?")
     public void updateTargetPrice() throws IOException {
         double targetPrice = upbitCandleService.checkTarget();
-        redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofHours(23));
+        redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofHours(24));
         log.info("목표가 갱신: {}", targetPrice);
         for (String userId : userStatusMap.keySet()) {
             TradingStatus status = userStatusMap.get(userId);
             if(!status.getOpMode().get()){
                 status.getOpMode().set(true);
+                status.getStopLossExecuted().set(false);
                 log.info("{}의 op_mode 활성화", userId);
             }
         }
@@ -56,6 +62,7 @@ public class RedisService {
         if (targetPrice != null) {
             return Double.parseDouble(targetPrice);
         }
+        log.error("{}", ErrorCode.REDIS_NOT_FOUND.getMessage());
         throw new CustomException(ErrorCode.REDIS_NOT_FOUND);
     }
 
