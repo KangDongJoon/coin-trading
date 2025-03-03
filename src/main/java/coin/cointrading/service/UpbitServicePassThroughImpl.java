@@ -21,7 +21,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Qualifier("passthrough")
-public class UpbitServicePassthrough implements UpbitService {
+public class UpbitServicePassThroughImpl implements UpbitService {
 
     private final String serverUrl = "https://api.upbit.com";
     private final JwtTokenProvider jwtTokenProvider;
