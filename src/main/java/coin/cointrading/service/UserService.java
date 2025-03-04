@@ -64,10 +64,8 @@ public class UserService {
                 throw new CustomException(ErrorCode.AUTH_NO_AUTHORIZATION_IP);
             }
         } catch (Exception e) {
-            // 기타 예외 처리
             throw new RuntimeException("Upbit API 요청 실패: " + e.getMessage());
         }
-
 
         // 유저 객체 생성
         User user = new User(

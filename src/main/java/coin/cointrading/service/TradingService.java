@@ -15,8 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
@@ -29,6 +28,7 @@ public class TradingService {
     private final ConcurrentHashMap<String, ScheduledFuture<?>> userScheduledTasks;
     private final ConcurrentHashMap<String, TradingStatus> userStatusMap;
     private final ConcurrentHashMap<String, AuthUser> userAuthMap;
+    private final ExecutorService executorService;
     private final UpbitService upbitService;
     private final RedisService redisService;
 
@@ -45,11 +45,18 @@ public class TradingService {
                     try {
                         initProgram(authUser);
                         startProgram(authUser);
-                        if(i.incrementAndGet() == 3600){
+                        if (i.get() == 0) {
                             TradingStatus status = userStatusMap.get(authUser.getUserId());
-                            log.info("{}의 프로그램 동작 중, op_mode: {}, hold: {},", authUser.getUserId(), status.getOpMode().get(), status.getHold().get());
+                            log.info("{}의 프로그램 동작 중, 금일 매매 로직 동작: {}, 금일 매수 여부: {}",
+                                    authUser.getUserId(),
+                                    status.getOpMode().get(),
+                                    status.getHold().get());
+                        }
+
+                        if (i.incrementAndGet() >= 3600) {
                             i.set(0);
                         }
+
                     } catch (Exception e) {
                         log.info("프로그램 실행 중 오류 발생: {}", e.getMessage());
                         throw new RuntimeException(e);
@@ -71,6 +78,8 @@ public class TradingService {
             boolean cancelled = future.cancel(true);
             if (cancelled) {
                 userScheduledTasks.remove(userId);
+                userStatusMap.remove(userId);
+                userAuthMap.remove(userId);
                 log.info("{}의 거래 프로그램이 정상적으로 종료되었습니다.", userId);
             } else {
                 log.warn("{}의 거래 프로그램 종료 요청이 실패했습니다.", userId);
@@ -118,16 +127,24 @@ public class TradingService {
 
     @Scheduled(cron = "50 59 8 * * ?")
     public void sellLogic() {
-        // 각 사용자에 대해 별도의 쓰레드로 매도 처리
         for (String userId : userScheduledTasks.keySet()) {
             TradingStatus status = userStatusMap.get(userId);
             AuthUser authUser = userAuthMap.get(userId);
+
+            stopTrading(authUser);
 
             boolean op_mode = status.getOpMode().get();
             boolean hold = status.getHold().get();
             boolean stopLossExecuted = status.getStopLossExecuted().get();
 
-            if (op_mode && hold && !stopLossExecuted) processSell(authUser, status);
+            if (op_mode && hold && !stopLossExecuted) {
+                executorService.submit(() -> {
+                    processSell(authUser, status);
+                    startTrading(authUser);
+                });
+            } else {
+                startTrading(authUser);
+            }
         }
     }
 
@@ -140,20 +157,32 @@ public class TradingService {
             status.getOpMode().set(false);
             status.getHold().set(false);
 
-            // 거래 결과 확인 (매도 이후)
-            Thread.sleep(10000);
+            CompletableFuture<Void> waitForOrder = CompletableFuture.runAsync(() -> {
+                try {
+                    TimeUnit.SECONDS.sleep(10);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.error("{}의 매도 대기 중 오류 발생: {}", authUser.getUserId(), e.getMessage());
+                }
+            });
 
-            List<Map<String, Object>> orders = (List<Map<String, Object>>) upbitService.getOrders(authUser, 1);
-            Map<String, Object> order = orders.get(0);
+            waitForOrder.thenRun(() -> {
+                try {
+                    // 거래 결과 확인 (매도 이후)
+                    List<Map<String, Object>> orders = (List<Map<String, Object>>) upbitService.getOrders(authUser, 1);
+                    Map<String, Object> order = orders.get(0);
 
-            Double executedFunds = Double.parseDouble((String) order.get("executed_funds"));
-            Double paidFee = Double.parseDouble((String) order.get("paid_fee"));
-            double sellLocked = Math.round(executedFunds - paidFee);
-            double locked = status.getBuyPrice().get();
-            double ror = Math.round((sellLocked - locked) / locked * 10.0) / 10.0;
+                    Double executedFunds = Double.parseDouble((String) order.get("executed_funds"));
+                    Double paidFee = Double.parseDouble((String) order.get("paid_fee"));
+                    double sellLocked = Math.round(executedFunds - paidFee);
+                    double locked = status.getBuyPrice().get();
+                    double ror = Math.round((sellLocked - locked) / locked * 10.0) / 10.0;
 
-            log.info("{}의 매도 수익률: {}%", authUser.getUserId(), ror);
-
+                    log.info("{}의 매도 수익률: {}%", authUser.getUserId(), ror);
+                } catch (Exception e) {
+                    log.error("{}의 매도 결과 확인 중 오류 발생: {}", authUser.getUserId(), e.getMessage());
+                }
+            });
         } catch (Exception e) {
             log.error("{}의 매도 처리 중 오류 발생: {}", authUser.getUserId(), e.getMessage());
         }
