@@ -1,37 +1,39 @@
 package coin.cointrading.service;
 
 import coin.cointrading.domain.AuthUser;
-import coin.cointrading.dto.UpbitCandle;
-import coin.cointrading.repository.BackDataRepository;
+import coin.cointrading.dto.OrderResponse;
+import coin.cointrading.dto.TradingStatus;
+import coin.cointrading.exception.CustomException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ScheduledFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.*;
 
 class TradingServiceTest {
 
-    private ConcurrentHashMap<String, Future<?>> userTrades;
-    private ExecutorService executorService;
-    private Map<String, AtomicBoolean> userRunningStatus;
-
     @Mock
-    private BackDataRepository backDataRepository;
+    private RedisService redisService;
 
     @Mock
     private UpbitService upbitService;
 
-    @Mock
-    private UpbitCandleService upbitCandleService;
+    private TaskScheduler taskScheduler;
+    private ConcurrentHashMap<String, ScheduledFuture<?>> userScheduledTasks;
+    private ConcurrentHashMap<String, TradingStatus> userStatusMap;
+    private ConcurrentHashMap<String, AuthUser> userAuthMap;
+    private ExecutorService executorService;
 
     @InjectMocks
     private TradingService tradingService;
@@ -39,55 +41,94 @@ class TradingServiceTest {
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);
-        userTrades = new ConcurrentHashMap<>();
-        executorService = Executors.newFixedThreadPool(2); // 2개의 스레드 풀 생성
-        userRunningStatus = new ConcurrentHashMap<>();
-        tradingService = new TradingService(userTrades, executorService, userRunningStatus, backDataRepository, upbitService, upbitCandleService);
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(10);
+        scheduler.setThreadNamePrefix("TradingScheduler-");
+        scheduler.initialize();
+        taskScheduler = scheduler;
+        userScheduledTasks = new ConcurrentHashMap<>();
+        userStatusMap = new ConcurrentHashMap<>();
+        userAuthMap = new ConcurrentHashMap<>();
+        executorService = Executors.newFixedThreadPool(10);
+
+        tradingService = new TradingService(
+                taskScheduler,
+                userScheduledTasks,
+                userStatusMap,
+                userAuthMap,
+                executorService,
+                upbitService,
+                redisService
+        );
     }
 
     @Test
-    void startTrading_multipleThreads() {
+    void trading_async() {
         // given
         AuthUser authUser1 = new AuthUser("user1", "nick1", "secret1", "access1");
         AuthUser authUser2 = new AuthUser("user2", "nick2", "secret2", "access2");
+
+        // when && then
+        tradingService.startTrading(authUser1);
+        tradingService.startTrading(authUser2);
+        assertThat(userScheduledTasks.size()).isEqualTo(2);
+
+        tradingService.stopTrading(authUser1);
+        assertThat(userScheduledTasks.size()).isEqualTo(1);
+        assertThat(userScheduledTasks.containsKey(authUser1.getUserId())).isFalse();
+
+        tradingService.stopTrading(authUser2);
+        assertThat(userScheduledTasks.size()).isEqualTo(0);
+    }
+
+    @Test
+    void startTrading_fail_already_generate() {
+        // given
+        AuthUser authUser1 = new AuthUser("user1", "nick1", "secret1", "access1");
+        tradingService.startTrading(authUser1);
 
         // when
-        executorService.execute(() -> tradingService.startTrading(authUser1));
-        executorService.execute(() -> tradingService.startTrading(authUser2));
+        CustomException exception = assertThrows(CustomException.class, () -> tradingService.startTrading(authUser1));
 
         // then
-        assertThat(userTrades).hasSize(2);
-        assertThat(userRunningStatus.get("user1").get()).isTrue();
-        assertThat(userRunningStatus.get("user2").get()).isTrue();
+        assertThat(exception.getMessage()).isEqualTo("이미 프로그램이 동작중입니다.");
     }
 
     @Test
-    void stopTrading() throws Exception {
-        // given
+    void startProgram_success_buy() throws Exception {
         AuthUser authUser1 = new AuthUser("user1", "nick1", "secret1", "access1");
-        AuthUser authUser2 = new AuthUser("user2", "nick2", "secret2", "access2");
+        TradingStatus status = new TradingStatus();
+        status.getOpMode().set(true);
+        userStatusMap.put(authUser1.getUserId(), status);
+        double current1 = 10000;
+        double current2 = 11000;
+        double todayTarget = 11000;
+        when(redisService.getCurrentPrice()).thenReturn(current1).thenReturn(current2);
+        when(redisService.getTargetPrice()).thenReturn(todayTarget);
 
-        // when & then
-        // 프로그램 2개 동작
-        executorService.execute(() -> tradingService.startTrading(authUser1));
-        Thread.sleep(1000);
-        assertThat(userTrades).hasSize(1);
-        executorService.execute(() -> tradingService.startTrading(authUser2));
-        Thread.sleep(1000);
-        assertThat(userTrades).hasSize(2);
-        assertThat(userRunningStatus.get("user1").get()).isTrue();
-        assertThat(userRunningStatus.get("user2").get()).isTrue();
+        OrderResponse orderResponse = new OrderResponse(
+                "KRW_ETH",
+                "bid",
+                "11000",
+                "1.0",
+                "1.0",
+                "11000"
+        );
+        when(upbitService.orderCoins("buy", authUser1)).thenReturn(orderResponse);
 
-        // 프로그램1 종료(실행 1 종료 1)
-        tradingService.stopTrading(authUser1);
-        assertThat(userTrades).hasSize(1);
-        assertThat(userRunningStatus.get("user1").get()).isFalse();
-        assertThat(userRunningStatus.get("user2").get()).isTrue();
-
-        // 프로그램2 종료(실행 0 종료 2)
-        tradingService.stopTrading(authUser2);
-        assertThat(userTrades).hasSize(0);
-        assertThat(userRunningStatus.get("user1").get()).isFalse();
-        assertThat(userRunningStatus.get("user2").get()).isFalse();
+        for (int i = 0; i < 3; i++){
+            tradingService.startProgram(authUser1);
+            if(i == 0){
+                assertThat(status.getHold()).isFalse();
+            }
+            if(i == 1){
+                assertThat(status.getHold()).isTrue();
+            }
+        }
+        verify(upbitService, times(1)).orderCoins("buy", authUser1);
     }
 }
+
+
+
+

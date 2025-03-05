@@ -40,7 +40,7 @@ class UpbitServiceTest {
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);
-        upbitService = new UpbitServicePassthrough(jwtTokenProvider, restTemplate);
+        upbitService = new UpbitServicePassThroughImpl(jwtTokenProvider, restTemplate);
     }
 
     @Test
