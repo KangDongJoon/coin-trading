@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -25,6 +24,8 @@ public class AsyncConfig {
     }
 
     @Bean
-    Set<String> runningUser() { return new HashSet<>(); }
+    Set<String> runningUser() {
+        return ConcurrentHashMap.newKeySet();
+    }
 }
 

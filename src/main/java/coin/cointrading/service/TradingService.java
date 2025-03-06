@@ -33,11 +33,13 @@ public class TradingService {
     public void startTrading(AuthUser authUser) {
         initProgram(authUser);
         runningUser.add(authUser.getUserId());
+        log.info("{}의 프로그램이 실행되었습니다.", authUser.getUserId());
     }
 
     // 프로그램 종료
     public void stopTrading(AuthUser authUser) {
         runningUser.remove(authUser.getUserId());
+        log.info("{}의 프로그램이 종료되었습니다.", authUser.getUserId());
     }
 
     public String checkStatus(AuthUser authUser) {
@@ -48,6 +50,14 @@ public class TradingService {
     private void initProgram(AuthUser authUser) {
         userAuthMap.putIfAbsent(authUser.getUserId(), authUser);
         userStatusMap.putIfAbsent(authUser.getUserId(), new TradingStatus());
+    }
+
+    @Scheduled(cron = "0 0 * * * ?")
+    public void programStatus() {
+        for (String userId : runningUser) {
+            TradingStatus status = userStatusMap.get(userId);
+            log.info("---{}의 프로그램 동작중--- op_mode: {}, hold: {}", userId, status.getOpMode().get(), status.getHold().get());
+        }
     }
 
     @Scheduled(fixedRate = 1000)
@@ -62,7 +72,6 @@ public class TradingService {
         if(currentPrice <= targetPrice * 0.95){
             processExecute();
         }
-
     }
 
     private void processBuy() {
