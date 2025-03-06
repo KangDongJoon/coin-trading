@@ -56,17 +56,15 @@ public class TradingController {
 
     @PostMapping("/v1/initbackdata")
     public void initBackData() throws IOException {
-        tradingService.initBackData();
     }
 
     @PostMapping("/v1/backdata")
     public void postBackData() throws IOException {
-        tradingService.postBackData();
     }
 
     @GetMapping("/v1/backdata")
     public List<BackData> getBackData() {
-        return tradingService.getBackData();
+        return null;
     }
 
     @PostMapping("/v1/orders")
