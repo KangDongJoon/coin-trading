@@ -3,6 +3,7 @@ package coin.cointrading.service;
 import coin.cointrading.dto.TradingStatus;
 import coin.cointrading.exception.CustomException;
 import coin.cointrading.exception.ErrorCode;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -21,6 +22,12 @@ public class RedisService {
     private final RedisTemplate<String, String> redisTemplate;
     private final UpbitCandleService upbitCandleService;
     private final ConcurrentHashMap<String, TradingStatus> userStatusMap;
+
+    @PostConstruct
+    public void initialize() throws IOException {
+        updatePriceCache();
+        updateTargetPrice();
+    }
 
     @Scheduled(fixedRate = 1000)
     public void updatePriceCache() throws IOException {
