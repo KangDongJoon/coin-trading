@@ -17,7 +17,10 @@ public enum ErrorCode {
     AUTH_INVALID_API_KEY(HttpStatus.UNAUTHORIZED, "잘못된 API 키입니다. 발급된 키를 확인하세요."),
     AUTH_NO_AUTHORIZATION_IP(HttpStatus.UNAUTHORIZED, "허용되지 않은 IP입니다, 서버 IP로 키를 재발급해주세요."),
 
-    COMMON_INVALID_TYPE(HttpStatus.BAD_REQUEST, "잘못된 타입 매치 입니다.");
+    COMMON_INVALID_TYPE(HttpStatus.BAD_REQUEST, "잘못된 타입 매치 입니다."),
+
+    UPBIT_ORDER_FAIL(HttpStatus.BAD_REQUEST, "매수 로직 실패"),
+    UPBIT_ORDER_LIST_READ_FAIL(HttpStatus.BAD_REQUEST, "매매내역 확인 실패");
 
     private final HttpStatus status;
     private final String message;
