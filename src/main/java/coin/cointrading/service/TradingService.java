@@ -7,16 +7,15 @@ import coin.cointrading.exception.CustomException;
 import coin.cointrading.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -24,167 +23,145 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Transactional(readOnly = true)
 public class TradingService {
 
-    private final TaskScheduler taskScheduler;
-    private final ConcurrentHashMap<String, ScheduledFuture<?>> userScheduledTasks;
     private final ConcurrentHashMap<String, TradingStatus> userStatusMap;
     private final ConcurrentHashMap<String, AuthUser> userAuthMap;
-    private final ExecutorService executorService;
+    private final Set<String> runningUser;
     private final UpbitService upbitService;
     private final RedisService redisService;
 
     // 프로그램 실행
     public void startTrading(AuthUser authUser) {
-        String userId = authUser.getUserId();
-
-        // 실행중인 프로그램이 있는지 확인
-        if (userScheduledTasks.containsKey(userId)) throw new CustomException(ErrorCode.TRADING_ALREADY_GENERATE);
-
-        AtomicInteger i = new AtomicInteger();
-        ScheduledFuture<?> future = taskScheduler.scheduleWithFixedDelay(
-                () -> {
-                    try {
-                        initProgram(authUser);
-                        startProgram(authUser);
-                        if (i.get() == 0) {
-                            TradingStatus status = userStatusMap.get(authUser.getUserId());
-                            log.info("{}의 프로그램 동작 중, 금일 매매 로직 동작: {}, 금일 매수 여부: {}",
-                                    authUser.getUserId(),
-                                    status.getOpMode().get(),
-                                    status.getHold().get());
-                        }
-
-                        if (i.incrementAndGet() >= 3600) {
-                            i.set(0);
-                        }
-
-                    } catch (Exception e) {
-                        log.info("프로그램 실행 중 오류 발생: {}", e.getMessage());
-                        throw new RuntimeException(e);
-                    }
-                },
-                Duration.ofMillis(1000)
-        );
-
-        userScheduledTasks.put(authUser.getUserId(), future);
+        initProgram(authUser);
+        runningUser.add(authUser.getUserId());
     }
 
+    // 프로그램 종료
     public void stopTrading(AuthUser authUser) {
-        String userId = authUser.getUserId();
-
-        ScheduledFuture<?> future = userScheduledTasks.get(userId);
-        if (future == null) throw new CustomException(ErrorCode.TRADING_NOT_FOUND);
-
-        try {
-            boolean cancelled = future.cancel(true);
-            if (cancelled) {
-                userScheduledTasks.remove(userId);
-                userStatusMap.remove(userId);
-                userAuthMap.remove(userId);
-                log.info("{}의 거래 프로그램이 정상적으로 종료되었습니다.", userId);
-            } else {
-                log.warn("{}의 거래 프로그램 종료 요청이 실패했습니다.", userId);
-            }
-        } catch (Exception e) {
-            log.error("{}의 프로그램 종료 중 오류 발생: {}", userId, e.getMessage(), e);
-        }
+        runningUser.remove(authUser.getUserId());
     }
 
     public String checkStatus(AuthUser authUser) {
-        if (userScheduledTasks.containsKey(authUser.getUserId())) return "true"; // 실행 중
+        if (runningUser.contains(authUser.getUserId())) return "true"; // 실행 중
         else return "false"; // 실행 중 아님
     }
 
-    public void initProgram(AuthUser authUser) {
+    private void initProgram(AuthUser authUser) {
         userAuthMap.putIfAbsent(authUser.getUserId(), authUser);
         userStatusMap.putIfAbsent(authUser.getUserId(), new TradingStatus());
     }
 
-    public void startProgram(AuthUser authUser) throws Exception {
-        TradingStatus status = userStatusMap.get(authUser.getUserId());
-        double todayTarget = 0;
-        double current = redisService.getCurrentPrice();
+    @Scheduled(fixedRate = 1000)
+    public void checkPrice() {
+        double currentPrice = redisService.getCurrentPrice();
+        double targetPrice = redisService.getTargetPrice();
 
-        if(status.getOpMode().get()){
-            todayTarget = redisService.getTargetPrice(); // 당일 목표가 캐싱
+        if (currentPrice >= targetPrice) {
+            processBuy();
         }
 
-        // 매수 로직
-        if (current >= todayTarget && status.getOpMode().get() && !status.getStopLossExecuted().get() && !status.getHold().get()) {
-            // 매수 api
-            OrderResponse orderResponse = (OrderResponse) upbitService.orderCoins("buy", authUser);
-            status.getHold().set(true);
-            double locked = Math.round(Double.parseDouble(orderResponse.getLocked()));
-            status.getBuyPrice().set(locked);
-            log.info("{}의 매수 금액: {}원", authUser.getUserId(), locked);
+        if(currentPrice <= targetPrice * 0.95){
+            processExecute();
         }
 
-        // 손절 로직
-        if (current <= status.getBuyPrice().get() * 0.95 && status.getHold().get()) {
-            processSell(authUser, status);
-            status.getStopLossExecuted().set(true);
-        }
     }
 
-    @Scheduled(cron = "50 59 8 * * ?")
-    public void sellLogic() {
-        for (String userId : userScheduledTasks.keySet()) {
+    private void processBuy() {
+        for (String userId : runningUser) {
             TradingStatus status = userStatusMap.get(userId);
-            AuthUser authUser = userAuthMap.get(userId);
-
-            stopTrading(authUser);
-
-            boolean op_mode = status.getOpMode().get();
-            boolean hold = status.getHold().get();
-            boolean stopLossExecuted = status.getStopLossExecuted().get();
-
-            if (op_mode && hold && !stopLossExecuted) {
-                executorService.submit(() -> {
-                    processSell(authUser, status);
-                    startTrading(authUser);
+            if (status.getOpMode().get() && !status.getStopLossExecuted().get() && !status.getHold().get()) {
+                AuthUser authUser = userAuthMap.get(userId);
+                CompletableFuture.supplyAsync(
+                        () -> {
+                            try {
+                                return upbitService.orderCoins("buy", authUser);
+                            } catch (Exception e) {
+                                throw new CustomException(ErrorCode.UPBIT_ORDER_FAIL);
+                            }
+                        }
+                ).thenAccept(result -> {
+                    OrderResponse response = (OrderResponse) result;
+                    status.getHold().set(true);  // 매수 완료 상태로 변경
+                    double locked = Math.round(Double.parseDouble(response.getLocked()));
+                    status.getBuyPrice().set(locked);  // 매수 금액 설정
+                    log.info("{}의 매수 금액: {}원", authUser.getUserId(), locked);
                 });
-            } else {
-                startTrading(authUser);
             }
         }
     }
 
-    // 매도 처리 로직
-    private void processSell(AuthUser authUser, TradingStatus status) {
-        try {
-            upbitService.orderCoins("sell", authUser);
+    @Scheduled(cron = "50 59 8 * * ?")
+    public void processSell() {
+        for (String userId : runningUser) {
+            TradingStatus status = userStatusMap.get(userId);
+            if (status.getOpMode().get() && !status.getStopLossExecuted().get() && status.getHold().get()) {
+                AuthUser authUser = userAuthMap.get(userId);
+                CompletableFuture.supplyAsync(
+                        () -> {
+                            try {
+                                return upbitService.orderCoins("sell", authUser);
+                            } catch (Exception e) {
+                                throw new CustomException(ErrorCode.UPBIT_ORDER_FAIL);
+                            }
+                        }
+                ).thenCompose(orderResponse ->
+                        CompletableFuture.supplyAsync(
+                                () -> {
+                                    try {
+                                        return upbitService.getOrders(authUser, 1);
+                                    } catch (Exception e) {
+                                        throw new CustomException(ErrorCode.UPBIT_ORDER_LIST_READ_FAIL);
+                                    }
+                                }
+                        ).thenAccept(result -> {
+                            List<Map<String, Object>> orders = (List<Map<String, Object>>) result;
+                            Map<String, Object> order = orders.get(0);
+                            Double executedFunds = Double.parseDouble((String) order.get("executed_funds"));
+                            Double paidFee = Double.parseDouble((String) order.get("paid_fee"));
+                            double sellLocked = Math.round(executedFunds - paidFee);
+                            double locked = status.getBuyPrice().get();
+                            double ror = Math.round((sellLocked - locked) / locked * 10.0) / 10.0;
+                            log.info("{}의 매도 수익률: {}%", authUser.getUserId(), ror);
+                        })
+                );
+            }
+        }
+    }
 
-            // 상태 업데이트
-            status.getOpMode().set(false);
-            status.getHold().set(false);
-
-            CompletableFuture<Void> waitForOrder = CompletableFuture.runAsync(() -> {
-                try {
-                    TimeUnit.SECONDS.sleep(10);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    log.error("{}의 매도 대기 중 오류 발생: {}", authUser.getUserId(), e.getMessage());
-                }
-            });
-
-            waitForOrder.thenRun(() -> {
-                try {
-                    // 거래 결과 확인 (매도 이후)
-                    List<Map<String, Object>> orders = (List<Map<String, Object>>) upbitService.getOrders(authUser, 1);
-                    Map<String, Object> order = orders.get(0);
-
-                    Double executedFunds = Double.parseDouble((String) order.get("executed_funds"));
-                    Double paidFee = Double.parseDouble((String) order.get("paid_fee"));
-                    double sellLocked = Math.round(executedFunds - paidFee);
-                    double locked = status.getBuyPrice().get();
-                    double ror = Math.round((sellLocked - locked) / locked * 10.0) / 10.0;
-
-                    log.info("{}의 매도 수익률: {}%", authUser.getUserId(), ror);
-                } catch (Exception e) {
-                    log.error("{}의 매도 결과 확인 중 오류 발생: {}", authUser.getUserId(), e.getMessage());
-                }
-            });
-        } catch (Exception e) {
-            log.error("{}의 매도 처리 중 오류 발생: {}", authUser.getUserId(), e.getMessage());
+    private void processExecute() {
+        for (String userId : runningUser) {
+            TradingStatus status = userStatusMap.get(userId);
+            if (status.getOpMode().get() && !status.getStopLossExecuted().get() && status.getHold().get()) {
+                AuthUser authUser = userAuthMap.get(userId);
+                CompletableFuture.supplyAsync(
+                        () -> {
+                            try {
+                                return upbitService.orderCoins("sell", authUser);
+                            } catch (Exception e) {
+                                throw new CustomException(ErrorCode.UPBIT_ORDER_FAIL);
+                            }
+                        }
+                ).thenCompose(orderResponse ->
+                        CompletableFuture.supplyAsync(
+                                () -> {
+                                    try {
+                                        return upbitService.getOrders(authUser, 1);
+                                    } catch (Exception e) {
+                                        throw new CustomException(ErrorCode.UPBIT_ORDER_LIST_READ_FAIL);
+                                    }
+                                }
+                        ).thenAccept(result -> {
+                            List<Map<String, Object>> orders = (List<Map<String, Object>>) result;
+                            Map<String, Object> order = orders.get(0);
+                            Double executedFunds = Double.parseDouble((String) order.get("executed_funds"));
+                            Double paidFee = Double.parseDouble((String) order.get("paid_fee"));
+                            double sellLocked = Math.round(executedFunds - paidFee);
+                            double locked = status.getBuyPrice().get();
+                            double ror = Math.round((sellLocked - locked) / locked * 10.0) / 10.0;
+                            log.info("{}의 매도 수익률: {}%", authUser.getUserId(), ror);
+                        })
+                );
+            }
+            status.getStopLossExecuted().set(true);
         }
     }
 }
