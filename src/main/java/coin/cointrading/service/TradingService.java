@@ -153,6 +153,7 @@ public class TradingService {
     }
 
     private void afterSell(Object result, TradingStatus status, AuthUser authUser) {
+        status.getHold().set(false);
         List<Map<String, Object>> orders = (List<Map<String, Object>>) result;
         Map<String, Object> order = orders.get(0);
         Double executedFunds = Double.parseDouble((String) order.get("executed_funds"));
