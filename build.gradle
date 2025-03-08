@@ -60,6 +60,9 @@ dependencies {
     // redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
+
+    // 비동기 대기 await
+    testImplementation 'org.awaitility:awaitility:4.2.0'
 }
 
 tasks.named('test') {
