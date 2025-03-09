@@ -147,6 +147,21 @@ class TradingServiceTest {
         // then
         assertTrue(status.getStopLossExecuted().get());
     }
+
+    @Test
+    void checkStatus_success() {
+        // given
+        tradingService.startTrading(authUser1);
+
+        // when
+        String status1 = tradingService.checkStatus(authUser1);
+        String status2 = tradingService.checkStatus(authUser2);
+
+        // then
+        assertThat(status1).isEqualTo("true");
+        assertThat(status2).isEqualTo("false");
+
+    }
 }
 
 
