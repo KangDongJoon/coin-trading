@@ -1,6 +1,5 @@
 package coin.cointrading.service;
 
-import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.User;
 import coin.cointrading.dto.LoginRequest;
 import coin.cointrading.dto.UserSignupRequest;
@@ -156,7 +155,7 @@ class UserServiceTest {
         when(userRepository.findByUserId(request.getUserId())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(true);
         String testToken = "loginToken";
-        when(jwtTokenProvider.createLoginToken(
+        when(jwtTokenProvider.createAccessToken(
                 user.getUserId(),
                 user.getUserNickname(),
                 user.getUpbitSecretKey(),

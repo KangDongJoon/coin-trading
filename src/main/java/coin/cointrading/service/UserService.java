@@ -31,6 +31,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final AES256Util aes256Util;
     private final RestTemplate restTemplate;
+    private final RedisService redisService;
 
     /**
      * 회원가입
@@ -99,7 +100,10 @@ public class UserService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword()))
             throw new CustomException(ErrorCode.AUTH_PASSWORD_BAD_REQUEST);
 
-        return jwtTokenProvider.createLoginToken(
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getUserId());
+        redisService.saveRefreshToken(user.getUserId(), refreshToken, 7 * 24 * 60 * 60);
+
+        return jwtTokenProvider.createAccessToken(
                 user.getUserId(),
                 user.getUserNickname(),
                 user.getUpbitSecretKey(),
