@@ -1,6 +1,7 @@
 package coin.cointrading.util;
 
 import coin.cointrading.domain.AuthUser;
+import coin.cointrading.service.RedisService;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -23,22 +24,32 @@ public class JwtTokenProvider {
     @Value("${jwt.secret.key}")
     private String jwtSecretKey;
     private final AES256Util aes256Util;
+    private final RedisService redisService;
 
-    public String createLoginToken(String userId, String userNickname, String upbitSecretKey, String upbitAccessKey) {
+    public String createRefreshToken(String userId) {
         Algorithm algorithm = Algorithm.HMAC256(jwtSecretKey);  // 비밀 키로 서명
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"));
         Date date = calendar.getTime(); // KST 기준으로 발급 시각 설정
 
-        String jwtToken = JWT.create()
+        return JWT.create()
+                .withSubject(String.valueOf(userId))
+                .withIssuedAt(date)  // 발급일
+                .sign(algorithm); // 서명
+    }
+
+    public String createAccessToken(String userId, String userNickname, String upbitSecretKey, String upbitAccessKey) {
+        Algorithm algorithm = Algorithm.HMAC256(jwtSecretKey);  // 비밀 키로 서명
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"));
+        Date date = calendar.getTime(); // KST 기준으로 발급 시각 설정
+
+        return JWT.create()
                 .withSubject(String.valueOf(userId))
                 .withClaim("userNickname", userNickname)
                 .withClaim("upbitSecretKey", upbitSecretKey)
                 .withClaim("upbitAccessKey", upbitAccessKey)
                 .withIssuedAt(date)  // 발급일
                 .withExpiresAt(new Date(date.getTime() + 3600000))  // 만료일: 1시간
-                .sign(algorithm);  // 서명
-
-        return jwtToken;
+                .sign(algorithm);
     }
 
     public String createAccountToken(AuthUser authUser) throws Exception {
@@ -98,15 +109,8 @@ public class JwtTokenProvider {
                 .withClaim("query_hash_alg", "SHA512")
                 .sign(algorithm);
 
-        return  "Bearer " + jwtToken;
+        return "Bearer " + jwtToken;
     }
-
-//    public String substringToken(String tokenValue) {
-//        if (StringUtils.hasText(tokenValue) && tokenValue.startsWith(BEARER_PREFIX)) {
-//            return tokenValue.substring(7);
-//        }
-//        throw new NoSuchElementException("Not Found Token");
-//    }
 
     public DecodedJWT extractClaims(String token) {
         try {
@@ -119,9 +123,30 @@ public class JwtTokenProvider {
 
             Algorithm algorithm = Algorithm.HMAC256(jwtSecretKey);
             JWTVerifier verifier = JWT.require(algorithm).build();
+
+            DecodedJWT decodedJWT = JWT.decode(jwt);
+            String userId = decodedJWT.getSubject();
+            Date expiresAt = decodedJWT.getExpiresAt();
+            // accessToken 만료 확인 후 refreshToken 확인
+            if (expiresAt.before(new Date())) {
+                String refreshToken = redisService.getRefreshToken(userId);
+                if (refreshToken != null) {
+                    String userNickname = decodedJWT.getClaim("userNickname").asString();
+                    String upbitSecretKey = decodedJWT.getClaim("upbitSecretKey").asString();
+                    String upbitAccessKey = decodedJWT.getClaim("upbitAccessKey").asString();
+                    String newAccessToken = createAccessToken(
+                            userId,
+                            userNickname,
+                            upbitSecretKey,
+                            upbitAccessKey
+                    );
+                    return verifier.verify(newAccessToken);
+                }
+            }
             return verifier.verify(jwt);
         } catch (JWTVerificationException exception) {
             throw new RuntimeException("JWT 토큰 검증 실패", exception);
         }
     }
+
 }

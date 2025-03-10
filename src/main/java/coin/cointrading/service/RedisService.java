@@ -7,12 +7,14 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -27,6 +29,23 @@ public class RedisService {
     public void initialize() throws IOException {
         updatePriceCache();
         updateTargetPrice();
+    }
+
+    // Refresh Token 저장
+    public void saveRefreshToken(String userId, String refreshToken, long durationInSeconds) {
+        ValueOperations<String, String> values = redisTemplate.opsForValue();
+        values.set("refresh:" + userId, refreshToken, durationInSeconds, TimeUnit.SECONDS);
+    }
+
+    // Refresh Token 조회
+    public String getRefreshToken(String userId) {
+        ValueOperations<String, String> values = redisTemplate.opsForValue();
+        return values.get("refresh:" + userId);
+    }
+
+    // Refresh Token 삭제 (로그아웃 시)
+    public void deleteRefreshToken(String userId) {
+        redisTemplate.delete("refresh:" + userId);
     }
 
     @Scheduled(fixedRate = 1000)

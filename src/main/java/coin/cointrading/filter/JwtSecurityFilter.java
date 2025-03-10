@@ -3,7 +3,6 @@ package coin.cointrading.filter;
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.util.JwtAuthenticationToken;
 import coin.cointrading.util.JwtTokenProvider;
-import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -35,13 +34,13 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String requestURI = httpRequest.getRequestURI();
 
-        // ✅ 인증이 필요 없는 URL이라면 필터를 건너뜀
-        if (requestURI.equals("/") || requestURI.startsWith("/auth") || requestURI.startsWith("/error")) {
+        // 인증이 필요 없는 URL이라면 필터를 건너뜀
+        if (requestURI.equals("/") || requestURI.equals("/auth/login") || requestURI.equals("/auth/signup") || requestURI.startsWith("/error")) {
             chain.doFilter(httpRequest, httpResponse);
             return;
         }
 
-        String jwt = resolveToken(httpRequest); // ✅ 여기서 JWT 가져오기
+        String jwt = resolveToken(httpRequest); // 여기서 JWT 가져오기
 
         if (jwt != null) {
             try {
@@ -62,13 +61,6 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
                 } else {
                     log.error("JWT 파싱 실패: userId가 null이거나 SecurityContext에 이미 인증 정보가 설정됨");
                 }
-            } catch (TokenExpiredException e) {
-                log.error("JWT 만료됨", e);
-                httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                httpResponse.setHeader("Set-Cookie", "Authorization=; Path=/; HttpOnly; Max-Age=0");  // 쿠키 삭제
-                httpResponse.getWriter().write("토큰이 만료되었습니다. 다시 로그인해주세요.");
-                httpResponse.getWriter().flush();
-                return;
             } catch (Exception e) {
                 log.error("Internal server error", e);
                 httpResponse.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
