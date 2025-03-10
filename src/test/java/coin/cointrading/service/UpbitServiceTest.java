@@ -3,6 +3,7 @@ package coin.cointrading.service;
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.dto.AccountResponse;
 import coin.cointrading.dto.TestOrderResponse;
+import coin.cointrading.service.impl.UpbitServicePassThroughImpl;
 import coin.cointrading.util.JwtTokenProvider;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,8 +1,9 @@
-package coin.cointrading.service;
+package coin.cointrading.service.impl;
 
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.dto.AccountResponse;
 import coin.cointrading.dto.OrderResponse;
+import coin.cointrading.service.UpbitService;
 import coin.cointrading.util.JwtTokenProvider;
 import com.google.gson.Gson;
 import lombok.RequiredArgsConstructor;
@@ -129,7 +130,7 @@ public class UpbitServiceImpl implements UpbitService {
                     }
             ).getBody();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.info(e.getMessage());
             return null;
         }
     }

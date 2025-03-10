@@ -23,35 +23,55 @@ import java.util.concurrent.ConcurrentHashMap;
 @Transactional(readOnly = true)
 public class TradingService {
 
-    private final ConcurrentHashMap<String, TradingStatus> userStatusMap;
-    private final ConcurrentHashMap<String, AuthUser> userAuthMap;
-    private final Set<String> runningUser;
+    private final ConcurrentHashMap<String, TradingStatus> userStatusMap; // 유저 거래상태 저장 컬렉션
+    private final ConcurrentHashMap<String, AuthUser> userAuthMap; // 유저 Auth정보 저장 컬렉션
+    private final Set<String> runningUser; // 현재 프로그램을 실행중인 유저를 저장하는 컬렉션
     private final UpbitService upbitService;
     private final RedisService redisService;
 
-    // 프로그램 실행
+    /**
+     * 프로그램 실행
+     * @param authUser 로그인 유저
+     */
     public void startTrading(AuthUser authUser) {
         initProgram(authUser);
         runningUser.add(authUser.getUserId());
         log.info("{}의 프로그램이 실행되었습니다.", authUser.getUserId());
     }
 
-    // 프로그램 종료
+    /**
+     * 프로그램 종료, 서버에서 상태 및 Auth정보도 함께 삭제
+     * @param authUser 로그인 유저
+     */
     public void stopTrading(AuthUser authUser) {
         runningUser.remove(authUser.getUserId());
+        userAuthMap.remove(authUser.getUserId());
+        userStatusMap.remove(authUser.getUserId());
         log.info("{}의 프로그램이 종료되었습니다.", authUser.getUserId());
     }
 
+    /**
+     * 프론트 화면 버튼 전환을 위한 프로그램 실행상태 확인
+     * @param authUser 로그인 유저
+     * @return 상태
+     */
     public String checkStatus(AuthUser authUser) {
         if (runningUser.contains(authUser.getUserId())) return "true"; // 실행 중
         else return "false"; // 실행 중 아님
     }
 
+    /**
+     * 최초 실행 시 상태 및 Auth정보 서버에 추가
+     * @param authUser 로그인 유저
+     */
     private void initProgram(AuthUser authUser) {
         userAuthMap.putIfAbsent(authUser.getUserId(), authUser);
         userStatusMap.putIfAbsent(authUser.getUserId(), new TradingStatus());
     }
 
+    /**
+     * 1시간마다 유저 별 프로그램 동작상태 확인
+     */
     @Scheduled(cron = "0 0 * * * ?")
     public void programStatus() {
         for (String userId : runningUser) {
@@ -60,6 +80,9 @@ public class TradingService {
         }
     }
 
+    /**
+     * 1초마다 코인 시세 확인 후 매수, 손절 진행
+     */
     @Scheduled(fixedRate = 1000)
     public void checkPrice() {
         double currentPrice = redisService.getCurrentPrice();
@@ -74,6 +97,9 @@ public class TradingService {
         }
     }
 
+    /**
+     * 조건에 부합하면 매수 진행
+     */
     private void processBuy() {
         for (String userId : runningUser) {
             TradingStatus status = userStatusMap.get(userId);
@@ -84,6 +110,11 @@ public class TradingService {
         }
     }
 
+    /**
+     * 비동기 처리로 Upbit 매수 API 요청 및 상태 변경
+     * @param authUser 로그인 유저
+     * @param status 유저 거래 상태
+     */
     private void executeAsyncBuy(AuthUser authUser, TradingStatus status) {
         CompletableFuture.supplyAsync(() -> {
             try {
@@ -95,6 +126,9 @@ public class TradingService {
         }).thenAccept(result -> afterBuy(result, status, authUser));
     }
 
+    /**
+     * 매일 장 종료 시 전량 매도 처리
+     */
     @Scheduled(cron = "50 59 8 * * ?")
     public void processSell() {
         for (String userId : runningUser) {
@@ -106,6 +140,9 @@ public class TradingService {
         }
     }
 
+    /**
+     * 조건에 부합하면 손전 진행
+     */
     private void processExecute() {
         for (String userId : runningUser) {
             TradingStatus status = userStatusMap.get(userId);
@@ -117,6 +154,11 @@ public class TradingService {
         }
     }
 
+    /**
+     * 비동기 처리로 Upbit 매도 API 요청 및 상태 변경
+     * @param authUser 로그인 유저
+     * @param status 거래 상태
+     */
     private void executeAsyncSell(AuthUser authUser, TradingStatus status) {
         CompletableFuture.supplyAsync(
                 () -> {
@@ -143,7 +185,12 @@ public class TradingService {
         );
     }
 
-
+    /**
+     * 매수 처리 이후 상태 변경 및 매수금액 확인
+     * @param result 거래 결과
+     * @param status 거래 상태
+     * @param authUser 로그인 유저
+     */
     private void afterBuy(Object result, TradingStatus status, AuthUser authUser) {
         OrderResponse response = (OrderResponse) result;
         status.getHold().set(true);  // 매수 완료 상태로 변경
@@ -152,6 +199,12 @@ public class TradingService {
         log.info("{}의 매수 금액: {}원", authUser.getUserId(), locked);
     }
 
+    /**
+     * 매도 처리 후 상태 변경 및 수익률 확인
+     * @param result 거래 결과
+     * @param status 거래 상태
+     * @param authUser 로그인 유저
+     */
     private void afterSell(Object result, TradingStatus status, AuthUser authUser) {
         status.getHold().set(false);
         List<Map<String, Object>> orders = (List<Map<String, Object>>) result;

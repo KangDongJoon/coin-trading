@@ -1,7 +1,8 @@
-package coin.cointrading.service;
+package coin.cointrading.service.impl;
 
 import coin.cointrading.dto.SimpleCandleDTO;
 import coin.cointrading.dto.UpbitCandle;
+import coin.cointrading.service.UpbitCandleService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

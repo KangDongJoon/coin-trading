@@ -32,17 +32,21 @@ public class TradingController {
     @PostMapping("/v1/starts")
     public String startProgram(@AuthenticationPrincipal AuthUser authUser) {
         try {
-            // executeTrade 메서드 비동기 호출
             tradingService.startTrading(authUser);
-            return "매매 프로그램이 정상적으로 실행되었습니다.";
+            return authUser.getUserId() + "의 매매 프로그램이 정상적으로 실행되었습니다.";
         } catch (Exception e) {
-            return "매매 프로그램 실행 중 오류가 발생했습니다: " + e.getMessage();
+            return authUser.getUserId() + "의 매매 프로그램 실행 중 오류가 발생했습니다: " + e.getMessage();
         }
     }
 
     @PostMapping("/v1/stops")
-    public void stopProgram(@AuthenticationPrincipal AuthUser authUser) {
-        tradingService.stopTrading(authUser);
+    public String stopProgram(@AuthenticationPrincipal AuthUser authUser) {
+        try {
+            tradingService.stopTrading(authUser);
+            return authUser.getUserId() + "의 매매 프로그램이 정상적으로 종료되었습니다.";
+        } catch (Exception e) {
+            return authUser.getUserId() + "의 매매 프로그램 종료 중 오류가 발생했습니다: " + e.getMessage();
+        }
     }
 
     // 상태 확인 API

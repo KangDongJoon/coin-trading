@@ -32,6 +32,11 @@ public class UserService {
     private final AES256Util aes256Util;
     private final RestTemplate restTemplate;
 
+    /**
+     * 회원가입
+     * @param request id, pw, nickname, upbitSecretKey, upbitAccessKey
+     * @throws Exception
+     */
     @Transactional
     public void signup(UserSignupRequest request) throws Exception {
         // id를 통한 중복 가입 확인
@@ -80,6 +85,11 @@ public class UserService {
         userRepository.save(user);
     }
 
+    /**
+     * 로그인
+     * @param request id, pw
+     * @return 로그인 토큰
+     */
     public String login(LoginRequest request) {
         // 유저 가입 확인
         User user = userRepository.findByUserId(request.getUserId())
