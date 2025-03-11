@@ -43,6 +43,9 @@ class UserServiceTest {
     @Mock
     private RestTemplate restTemplate;
 
+    @Mock
+    private RedisService redisService;
+
     @InjectMocks
     private UserService userService;
 
