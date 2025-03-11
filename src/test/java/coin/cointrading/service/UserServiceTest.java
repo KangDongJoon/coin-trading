@@ -154,6 +154,7 @@ class UserServiceTest {
         User user = new User("test1", "test1password", "nick1", "secret1", "access1");
         when(userRepository.findByUserId(request.getUserId())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(true);
+        when(jwtTokenProvider.createRefreshToken(user.getUserId())).thenReturn("refreshTokenMock");
         String testToken = "loginToken";
         when(jwtTokenProvider.createAccessToken(
                 user.getUserId(),
