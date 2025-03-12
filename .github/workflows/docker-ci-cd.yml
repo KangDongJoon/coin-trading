@@ -53,6 +53,8 @@ jobs:
             docker rm -f redis-container || true
 
             # CoinTrading 최신 이미지 풀
+            docker stop cointrading
+            docker rm -f cointrading || true
             docker pull ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
 
             # Redis와 CoinTrading을 관리할 Docker Compose 파일 생성
@@ -90,4 +92,5 @@ jobs:
             EOF
 
             # Docker Compose로 두 서비스를 시작
+            docker-compose down
             docker-compose up -d
