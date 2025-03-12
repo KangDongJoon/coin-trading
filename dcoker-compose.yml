@@ -19,6 +19,7 @@ services:
       - "8080:8080"  # 애플리케이션 포트 연결
     environment:
       - AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}  # 환경 변수 설정
+      - SPRING_REDIS_HOST=redis
       - REDIS_HOST=redis
     depends_on:
       - redis  # cointrading 컨테이너가 redis 컨테이너가 실행된 후에 시작되도록 설정
