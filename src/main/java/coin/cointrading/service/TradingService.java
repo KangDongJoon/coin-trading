@@ -37,6 +37,7 @@ public class TradingService {
         initProgram(authUser);
         runningUser.add(authUser.getUserId());
         log.info("{}의 프로그램이 실행되었습니다.", authUser.getUserId());
+        log.info("금일 목표가: {}원", redisService.getTargetPrice());
     }
 
     /**
