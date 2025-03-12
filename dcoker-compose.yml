@@ -1,0 +1,20 @@
+version: '3.8'  # 사용할 Docker Compose 버전
+
+services:
+  redis:
+    image: redis:latest  # Redis 이미지
+    container_name: redis-container
+    ports:
+      - "6379:6379"  # Redis 포트 연결
+    volumes:
+      - /path/to/local/data:/data  # 로컬 데이터 볼륨 연결
+
+  cointrading:
+    image: ${secrets.DOCKER_USERNAME}/cointrading:latest  # 애플리케이션 이미지
+    container_name: cointrading
+    ports:
+      - "8080:8080"  # 애플리케이션 포트 연결
+    environment:
+      - AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}  # 환경 변수 설정
+    depends_on:
+      - redis  # cointrading 컨테이너가 redis 컨테이너가 실행된 후에 시작되도록 설정
