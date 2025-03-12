@@ -45,10 +45,42 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker run -d -p 6379:6379 -v /path/to/local/data:/data --name redis-container redis:latest
+            # Docker Compose가 설치되어 있지 않으면 설치
+            sudo apt-get update
+            sudo apt-get install -y docker-compose
+
+            # CoinTrading 최신 이미지 풀
             docker pull ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
-            docker stop cointrading || true
-            docker rm cointrading || true
-            docker run -d -p 8080:8080 --name cointrading \
-            -e AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }} \
-            ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
+
+            # Redis와 CoinTrading을 관리할 Docker Compose 파일 생성
+            cat <<EOF > docker-compose.yml
+            version: '3'
+            services:
+              redis:
+                image: redis:latest
+                container_name: redis-container
+                ports:
+                  - "6379:6379"
+                volumes:
+                  - /path/to/local/data:/data
+                networks:
+                  - app-network
+              cointrading:
+                image: ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
+                container_name: cointrading
+                ports:
+                  - "8080:8080"
+                environment:
+                  - AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}
+                  - SPRING_REDIS_HOST=redis
+                depends_on:
+                  - redis
+                networks:
+                  - app-network
+            networks:
+              app-network:
+                driver: bridge
+            EOF
+
+            # Docker Compose로 두 서비스를 시작
+            docker-compose up -d
