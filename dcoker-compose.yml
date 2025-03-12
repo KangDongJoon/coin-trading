@@ -3,7 +3,7 @@ version: '3.8'  # 사용할 Docker Compose 버전
 services:
   redis:
     image: redis:latest
-    container_name: redis-container
+    container_name: redis
     ports:
       - "6379:6379"
     volumes:
@@ -18,10 +18,10 @@ services:
     ports:
       - "8080:8080"  # 애플리케이션 포트 연결
     environment:
-      - SPRING_REDIS_HOST=redis
       - REDIS_HOST=redis
+      - SPRING_REDIS_HOST=redis
     depends_on:
-      - redis  # 서비스 이름은 'redis', 'redis-container'가 아님
+      - redis
     networks:
       - app-network
     restart: always  # 자동 재시작 설정
