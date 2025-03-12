@@ -14,6 +14,7 @@ services:
     container_name: cointrading
     ports:
       - "8080:8080"  # 애플리케이션 포트 연결
+    command: ["redis-server", "--bind", "0.0.0.0"]  # bind 설정 전달
     environment:
       - AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}  # 환경 변수 설정
     depends_on:
