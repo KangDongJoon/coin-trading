@@ -48,4 +48,4 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
             docker stop cointrading || true
             docker rm cointrading || true
-            docker run -d -p 8080:8080 --name cointrading ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
+            docker run --env-file .env -d -p 8080:8080 --name cointrading ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
