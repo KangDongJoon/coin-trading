@@ -2,12 +2,14 @@ version: '3.8'  # 사용할 Docker Compose 버전
 
 services:
   redis:
-    image: redis:latest  # Redis 이미지
+    image: redis:latest
     container_name: redis-container
     ports:
-      - "6379:6379"  # Redis 포트 연결
+      - "6379:6379"
     volumes:
-      - /path/to/local/data:/data  # 로컬 데이터 볼륨 연결
+      - redis-data:/data  # 데이터 지속성을 위한 볼륨 사용
+    networks:
+      - app-network
 
   cointrading:
     image: ${secrets.DOCKER_USERNAME}/cointrading:latest  # 애플리케이션 이미지
