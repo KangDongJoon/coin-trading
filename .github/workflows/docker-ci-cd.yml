@@ -45,6 +45,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            docker run -d -p 6379:6379 -v /path/to/local/data:/data --name redis-container redis:latest
             docker pull ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
             docker stop cointrading || true
             docker rm cointrading || true
