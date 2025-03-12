@@ -21,13 +21,14 @@ services:
       - SPRING_REDIS_HOST=redis
       - REDIS_HOST=redis
     depends_on:
-      - redis  # cointrading 컨테이너가 redis 컨테이너가 실행된 후에 시작되도록 설정
+      - redis  # 서비스 이름은 'redis', 'redis-container'가 아님
     networks:
       - app-network
     restart: always  # 자동 재시작 설정
 
 volumes:
   redis-data:  # Redis 데이터를 저장할 볼륨
+
 networks:
   app-network:
     driver: bridge
