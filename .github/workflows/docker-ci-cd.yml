@@ -67,19 +67,21 @@ jobs:
           script: |
             # Docker Compose 전송
             scp -i ${{ secrets.EC2_SSH_KEY }} docker-compose.yml ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/
-            # Docker Compose가 설치되어 있지 않으면 설치
-            if ! command -v docker-compose &> /dev/null
-            then
-                echo "docker-compose could not be found, installing..."
-                sudo apt-get update
-                sudo apt-get install -y docker-compose
+            
+            # Docker Compose가 설치되어 있는지 확인
+            if ! docker compose version &> /dev/null && ! docker-compose version &> /dev/null; then
+            echo "Docker Compose could not be found, installing..."
+            sudo apt-get update
+            sudo apt-get install -y docker-compose-plugin
+            sudo ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose || true
             else
-                echo "docker-compose is already installed"
+            echo "Docker Compose is already installed"
             fi
-
+  
             # CoinTrading 최신 이미지 풀
             docker stop cointrading
             docker rm -f cointrading || true
+            docker rmi -f ehdwns1118/cointrading:latest || true
             docker pull ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
 
             # Docker Compose 실행
