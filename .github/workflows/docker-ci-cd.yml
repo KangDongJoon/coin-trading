@@ -60,6 +60,7 @@ jobs:
             echo "AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}" >> $GITHUB_ENV
             echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> $GITHUB_ENV
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
+            echo "ROOT_PASSWORD=${{ secrets.ROOT_PASSWORD }}" >> $GITHUB_ENV
 
             # Docker Compose 실행
             docker-compose down
