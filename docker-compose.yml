@@ -47,6 +47,7 @@ services:
       - REDIS_HOST=${REDIS_HOST}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - AES_SECRET_KEY=${AES_SECRET_KEY}
+      - DB_URL=${DB_URL}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
     depends_on:

@@ -68,6 +68,7 @@ jobs:
 
             # 환경 변수 파일 생성 (.env)
             echo "REDIS_HOST=redis" > ~/.env
+            echo "DB_URL=jdbc:mysql://mysql:3306/cointrading" >> ~/.env
             echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> ~/.env
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> ~/.env
             echo "AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}" >> ~/.env
