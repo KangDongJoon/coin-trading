@@ -34,8 +34,15 @@ jobs:
       - name: Docker Hub에 Push
         run: docker push ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
 
-      - name: Copy docker-compose.yml to EC2
-        run: scp -i ${{ secrets.EC2_SSH_KEY }} docker-compose.yml ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/
+      - name: Set up SSH Key
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+
+      - name: Transfer docker-compose.yml to EC2
+        run: |
+          scp -i private_key.pem -o StrictHostKeyChecking=no docker-compose.yml ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/
+
 
   deploy:
     runs-on: ubuntu-latest
@@ -58,6 +65,8 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # Docker Compose 전송
+            scp -i ${{ secrets.EC2_SSH_KEY }} docker-compose.yml ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/
             # Docker Compose가 설치되어 있지 않으면 설치
             if ! command -v docker-compose &> /dev/null
             then
