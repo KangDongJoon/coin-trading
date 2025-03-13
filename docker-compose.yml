@@ -42,9 +42,9 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - DB_HOST=mysql
       - SPRING_REDIS_HOST=redis
       - REDIS_HOST=${REDIS_HOST}
-      - DB_HOST=mysql
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
