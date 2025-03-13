@@ -62,5 +62,4 @@ jobs:
 
             # Docker Compose 실행
             docker-compose down
-            # .env 파일을 로드한 상태에서 docker-compose 실행
-            export $(cat .env | xargs) && docker-compose up -d
+            docker-compose up -d

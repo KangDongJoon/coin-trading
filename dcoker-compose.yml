@@ -48,6 +48,7 @@ services:
       - SPRING_REDIS_HOST=redis
       - DB_HOST=mysql
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/cointrading
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
