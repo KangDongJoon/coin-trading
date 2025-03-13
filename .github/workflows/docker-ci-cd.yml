@@ -55,31 +55,34 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          script: |   
+          script: |
             # Docker Compose가 설치되어 있는지 확인
             if ! docker compose version &> /dev/null && ! docker-compose version &> /dev/null; then
-            echo "Docker Compose could not be found, installing..."
-            sudo apt-get update
-            sudo apt-get install -y docker-compose-plugin
-            sudo ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose || true
+              echo "Docker Compose could not be found, installing..."
+              sudo apt-get update
+              sudo apt-get install -y docker-compose-plugin
+              sudo ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose || true
             else
-            echo "Docker Compose is already installed"
+              echo "Docker Compose is already installed"
             fi
-  
-            # CoinTrading 최신 이미지 풀
-            docker stop cointrading
+
+            # 환경 변수 파일 생성 (.env)
+            echo "EC2_HOST=${{ secrets.EC2_HOST }}" > ~/cointrading/.env
+            echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> ~/cointrading/.env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> ~/cointrading/.env
+            echo "AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}" >> ~/cointrading/.env
+            echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> ~/cointrading/.env
+            echo "ROOT_PASSWORD=${{ secrets.ROOT_PASSWORD }}" >> ~/cointrading/.env
+
+            # 최신 Docker 이미지 풀
+            docker stop cointrading || true
             docker rm -f cointrading || true
-            docker rmi -f ehdwns1118/cointrading:latest || true
+            docker rmi -f ${{ secrets.DOCKER_USERNAME }}/cointrading:latest || true
             docker pull ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
 
-      - name: Run Docker Compose with environment variables
-        run: |
-          docker-compose down
-          docker-compose up -d
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST}}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          AES_SECRET_KEY: ${{ secrets.AES_SECRET_KEY}}
-          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY}}
-          ROOT_PASSWORD: ${{secrets.ROOT_PASSWORD}}
+            # Docker Compose 실행 (자동으로 .env 파일 로드)
+            cd ~/cointrading
+            docker-compose down
+            docker-compose up -d
+            
+            rm -f ~/cointrading/.env
