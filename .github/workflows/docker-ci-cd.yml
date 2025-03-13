@@ -49,27 +49,6 @@ jobs:
     needs: build
 
     steps:
-      - name: Set environment variables
-        run: |
-          echo "REDIS_HOST=redis" >> $GITHUB_ENV
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
-          echo "AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}" >> $GITHUB_ENV
-          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> $GITHUB_ENV
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
-          echo "ROOT_PASSWORD=${{ secrets.ROOT_PASSWORD }}" >> $GITHUB_ENV  
-          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> $GITHUB_ENV
-
-      - name: Check environment variables
-        run: |
-          echo "REDIS_HOST=redis"
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}"
-          echo "AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}"
-          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}"
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
-          echo "ROOT_PASSWORD=${{ secrets.ROOT_PASSWORD }}"
-          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}"
-
-
       - name: EC2 서버에 배포 (SSH 접속)
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -93,6 +72,14 @@ jobs:
             docker rmi -f ehdwns1118/cointrading:latest || true
             docker pull ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
 
-            # Docker Compose 실행
-            docker-compose down
-            docker-compose up -d
+      - name: Run Docker Compose with environment variables
+        run: |
+          docker-compose down
+          docker-compose up -d
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST}}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          AES_SECRET_KEY: ${{ secrets.AES_SECRET_KEY}}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY}}
+          ROOT_PASSWORD: ${{secrets.ROOT_PASSWORD}}
