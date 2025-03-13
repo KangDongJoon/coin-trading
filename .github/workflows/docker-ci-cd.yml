@@ -67,12 +67,12 @@ jobs:
             fi
 
             # 환경 변수 파일 생성 (.env)
-            echo "EC2_HOST=${{ secrets.EC2_HOST }}" > ~/cointrading/.env
-            echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> ~/cointrading/.env
-            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> ~/cointrading/.env
-            echo "AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}" >> ~/cointrading/.env
-            echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> ~/cointrading/.env
-            echo "ROOT_PASSWORD=${{ secrets.ROOT_PASSWORD }}" >> ~/cointrading/.env
+            echo "EC2_HOST=${{ secrets.EC2_HOST }}" > ~/.env
+            echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> ~/.env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> ~/.env
+            echo "AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}" >> ~/.env
+            echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> ~/.env
+            echo "ROOT_PASSWORD=${{ secrets.ROOT_PASSWORD }}" >> ~/.env
 
             # 최신 Docker 이미지 풀
             docker stop cointrading || true
@@ -85,4 +85,4 @@ jobs:
             docker-compose down
             docker-compose up -d
             
-            rm -f ~/cointrading/.env
+            rm -f ~/.env
