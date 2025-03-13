@@ -1,33 +1,67 @@
-version: '3.8'  # 사용할 Docker Compose 버전
+version: '3.8'
 
 services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${ROOT_PASSWORD}
+      MYSQL_DATABASE: cointrading
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:latest
     container_name: redis
     ports:
       - "6379:6379"
     volumes:
-      - redis-data:/data  # 데이터 지속성을 위한 볼륨 사용
+      - redis-data:/data
     networks:
       - app-network
-    restart: always  # 자동 재시작 설정
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   cointrading:
-    image: ${DOCKER_USERNAME}/cointrading:latest  # 애플리케이션 이미지
+    image: ${DOCKER_USERNAME}/cointrading:latest
     container_name: cointrading
     ports:
-      - "8080:8080"  # 애플리케이션 포트 연결
+      - "8080:8080"
     environment:
       - REDIS_HOST=redis
       - SPRING_REDIS_HOST=redis
+      - DB_HOST=mysql
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/cointrading
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - app-network
-    restart: always  # 자동 재시작 설정
+    restart: always
 
 volumes:
-  redis-data:  # Redis 데이터를 저장할 볼륨
+  redis-data:
+  mysql-data:
 
 networks:
   app-network:
