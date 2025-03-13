@@ -59,6 +59,17 @@ jobs:
           echo "ROOT_PASSWORD=${{ secrets.ROOT_PASSWORD }}" >> $GITHUB_ENV  
           echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> $GITHUB_ENV
 
+      - name: Check environment variables
+        run: |
+          echo "REDIS_HOST=redis"
+          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}"
+          echo "AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}"
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}"
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
+          echo "ROOT_PASSWORD=${{ secrets.ROOT_PASSWORD }}"
+          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}"
+
+
       - name: EC2 서버에 배포 (SSH 접속)
         uses: appleboy/ssh-action@v0.1.7
         with:
