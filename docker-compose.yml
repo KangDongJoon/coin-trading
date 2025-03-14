@@ -43,6 +43,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - TZ=Asia/Seoul
       - DB_HOST=mysql
       - SPRING_REDIS_HOST=redis
       - REDIS_HOST=${REDIS_HOST}
