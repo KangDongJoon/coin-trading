@@ -83,7 +83,6 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
 
             # Docker Compose 실행 (자동으로 .env 파일 로드)
-            cd ~/cointrading
             docker-compose down
             docker-compose up -d
             

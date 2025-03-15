@@ -35,4 +35,10 @@ public class PageController {
         return "returnrate";
     }
 
+    // 가이드 페이지로 이동
+    @GetMapping("/auth/guide")
+    public String showGuidePage() {
+        return "guide";
+    }
+
 }
