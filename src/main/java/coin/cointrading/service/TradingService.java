@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 
 @Slf4j
 @Service
@@ -28,6 +29,7 @@ public class TradingService {
     private final Set<String> runningUser; // 현재 프로그램을 실행중인 유저를 저장하는 컬렉션
     private final UpbitService upbitService;
     private final RedisService redisService;
+    private final ExecutorService executor;
 
     /**
      * 프로그램 실행
@@ -124,7 +126,7 @@ public class TradingService {
                 log.error(e.getMessage());
                 throw new CustomException(ErrorCode.UPBIT_ORDER_FAIL);
             }
-        }).thenAccept(result -> afterBuy(result, status, authUser));
+        }, executor).thenAccept(result -> afterBuy(result, status, authUser));
     }
 
     /**
@@ -169,7 +171,7 @@ public class TradingService {
                         log.error(e.getMessage());
                         throw new CustomException(ErrorCode.UPBIT_ORDER_FAIL);
                     }
-                }
+                }, executor
         ).thenCompose(orderResponse ->
                 CompletableFuture.supplyAsync(
                         () -> {
@@ -179,10 +181,8 @@ public class TradingService {
                                 log.error(e.getMessage());
                                 throw new CustomException(ErrorCode.UPBIT_ORDER_LIST_READ_FAIL);
                             }
-                        }
-                ).thenAccept(result -> {
-                    afterSell(result, status, authUser);
-                })
+                        }, executor
+                ).thenAccept(result -> afterSell(result, status, authUser))
         );
     }
 
@@ -208,6 +208,7 @@ public class TradingService {
      */
     private void afterSell(Object result, TradingStatus status, AuthUser authUser) {
         status.getHold().set(false);
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> orders = (List<Map<String, Object>>) result;
         Map<String, Object> order = orders.get(0);
         Double executedFunds = Double.parseDouble((String) order.get("executed_funds"));
@@ -216,5 +217,11 @@ public class TradingService {
         double locked = status.getBuyPrice().get();
         double ror = Math.round((sellLocked - locked) / locked * 10.0) / 10.0;
         log.info("{}의 매도 수익률: {}%", authUser.getUserId(), ror);
+    }
+
+    public void asyncTest() throws InterruptedException {
+        processBuy(); // 비동기 매수 실행
+        Thread.sleep(5000);
+        processSell();
     }
 }

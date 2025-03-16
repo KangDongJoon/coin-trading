@@ -9,7 +9,7 @@
 
     <!-- 파일 로그 저장 -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>/var/log/myapp.log</file>  <!-- 절대 경로로 변경 -->
+        <file>logs/myapp.log</file>  <!-- 절대 경로로 변경 -->
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- 로그 파일을 날짜별로 분할 -->
             <fileNamePattern>/var/log/myapp-%d{yyyy-MM-dd}.log</fileNamePattern>

@@ -11,8 +11,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -31,6 +30,7 @@ class TradingServiceTest {
     private ConcurrentHashMap<String, TradingStatus> userStatusMap;
     private ConcurrentHashMap<String, AuthUser> userAuthMap;
     private Set<String> runningUser;
+    private ExecutorService executor;
 
     private AuthUser authUser1;
     private AuthUser authUser2;
@@ -48,13 +48,15 @@ class TradingServiceTest {
         userStatusMap = new ConcurrentHashMap<>();
         userAuthMap = new ConcurrentHashMap<>();
         runningUser = ConcurrentHashMap.newKeySet();
+        executor = Executors.newFixedThreadPool(10);
 
         tradingService = new TradingService(
                 userStatusMap,
                 userAuthMap,
                 runningUser,
                 upbitService,
-                redisService
+                redisService,
+                executor
         );
 
         authUser1 = new AuthUser("user1", "nick1", "secret1", "access1");
