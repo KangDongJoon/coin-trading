@@ -71,9 +71,9 @@ public class TradingController {
         return null;
     }
 
-    @PostMapping("/v1/orders")
+    @PostMapping("/v1/orders/sell")
     public ResponseEntity<Object> order(@AuthenticationPrincipal AuthUser authUser) throws Exception {
-        String decision = "buy";
+        String decision = "sell";
         return ResponseEntity.ok(upbitService.orderCoins(decision, authUser));
     }
 
