@@ -222,6 +222,7 @@ public class TradingService {
     public void asyncTest() throws InterruptedException {
         processBuy(); // 비동기 매수 실행
         Thread.sleep(5000);
+        log.info("쓰레드슬립");
         processSell();
     }
 }
