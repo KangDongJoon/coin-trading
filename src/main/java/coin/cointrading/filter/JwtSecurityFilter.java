@@ -35,7 +35,7 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
         String requestURI = httpRequest.getRequestURI();
 
         // 인증이 필요 없는 URL이라면 필터를 건너뜀
-        if (requestURI.equals("/") || requestURI.equals("/auth/login") || requestURI.equals("/auth/signup") || requestURI.startsWith("/error")) {
+        if (requestURI.equals("/") || requestURI.equals("/auth/login") || requestURI.equals("/auth/signup") || requestURI.equals("/auth/guide") || requestURI.startsWith("/error")) {
             chain.doFilter(httpRequest, httpResponse);
             return;
         }

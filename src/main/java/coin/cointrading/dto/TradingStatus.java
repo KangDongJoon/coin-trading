@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @Getter
 public class TradingStatus {
-    private AtomicBoolean opMode = new AtomicBoolean(true); // 거래 시작 여부
+    private AtomicBoolean opMode = new AtomicBoolean(false); // 거래 시작 여부
     private AtomicBoolean hold = new AtomicBoolean(false); // 매수 여부
     private AtomicBoolean stopLossExecuted = new AtomicBoolean(false); // 손절 여부
 

@@ -103,6 +103,4 @@ public class RedisService {
             return getTargetPrice();  // 갱신된 값 반환
         }
     }
-
-
 }
