@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -89,18 +88,7 @@ public class RedisService {
         if (targetPrice != null) {
             return Double.parseDouble(targetPrice);
         } else {
-            log.error("{}", ErrorCode.REDIS_NOT_FOUND.getMessage());
-            // 비동기 방식으로 갱신 후 다시 호출하는 방식
-            CompletableFuture.runAsync(() -> {
-                try {
-                    updateTargetPrice();  // 비동기 방식으로 target price 갱신
-                } catch (IOException e) {
-                    log.error("Target price 갱신 실패", e);
-                }
-            }).join(); // 갱신이 완료될 때까지 대기
-
-            // 갱신 후 target price 반환
-            return getTargetPrice();  // 갱신된 값 반환
+            return getTargetPrice();
         }
     }
 }

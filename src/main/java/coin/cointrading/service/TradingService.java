@@ -207,6 +207,7 @@ public class TradingService {
      * @param authUser 로그인 유저
      */
     private void afterSell(Object result, TradingStatus status, AuthUser authUser) {
+        status.getOpMode().set(false);
         status.getHold().set(false);
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> orders = (List<Map<String, Object>>) result;
