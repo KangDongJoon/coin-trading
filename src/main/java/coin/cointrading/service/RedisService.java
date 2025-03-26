@@ -28,7 +28,9 @@ public class RedisService {
     @PostConstruct
     public void initialize() throws IOException {
         updatePriceCache();
-        updateTargetPrice();
+        double targetPrice = upbitCandleService.checkTarget();
+        redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofHours(24));
+        log.info("목표가 최초 갱신: {}", targetPrice);
     }
 
     // Refresh Token 저장
