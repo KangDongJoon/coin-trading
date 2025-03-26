@@ -30,7 +30,7 @@ public class PageController {
     }
 
     // 수익률 페이지로 이동
-    @GetMapping("/returnrate")
+    @GetMapping("/auth/returnrate")
     public String showReturnPage() {
         return "returnrate";
     }
