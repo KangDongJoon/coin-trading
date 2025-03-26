@@ -83,12 +83,13 @@ public class RedisService {
         }
     }
 
-    public double getTargetPrice() {
+    public double getTargetPrice() throws IOException {
         String targetPrice = redisTemplate.opsForValue().get("TARGET_PRICE");
         if (targetPrice != null) {
             return Double.parseDouble(targetPrice);
         } else {
-            return getTargetPrice();
+            updateTargetPrice();
+            return Double.parseDouble(redisTemplate.opsForValue().get("TARGET_PRICE"));
         }
     }
 }
