@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -87,7 +88,7 @@ public class TradingService {
      * 1초마다 코인 시세 확인 후 매수, 손절 진행
      */
     @Scheduled(fixedRate = 1000)
-    public void checkPrice() {
+    public void checkPrice() throws IOException {
         double currentPrice = redisService.getCurrentPrice();
         double targetPrice = redisService.getTargetPrice();
 
