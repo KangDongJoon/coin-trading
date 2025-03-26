@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
+import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.*;
 
@@ -64,7 +65,7 @@ class TradingServiceTest {
     }
 
     @Test
-    void startTrading_success() {
+    void startTrading_success() throws IOException {
         // when & then
         tradingService.startTrading(authUser1);
         assertThat(runningUser.size()).isEqualTo(1);
@@ -77,7 +78,7 @@ class TradingServiceTest {
     }
 
     @Test
-    void stopTrading_success() {
+    void stopTrading_success() throws IOException {
         // given
         tradingService.startTrading(authUser1);
         tradingService.startTrading(authUser2);
@@ -151,7 +152,7 @@ class TradingServiceTest {
     }
 
     @Test
-    void checkStatus_success() {
+    void checkStatus_success() throws IOException {
         // given
         tradingService.startTrading(authUser1);
 

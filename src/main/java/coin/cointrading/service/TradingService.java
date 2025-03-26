@@ -36,7 +36,7 @@ public class TradingService {
      * 프로그램 실행
      * @param authUser 로그인 유저
      */
-    public void startTrading(AuthUser authUser) {
+    public void startTrading(AuthUser authUser) throws IOException {
         initProgram(authUser);
         runningUser.add(authUser.getUserId());
         log.info("{}의 프로그램이 실행되었습니다.", authUser.getUserId());

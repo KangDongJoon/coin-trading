@@ -85,11 +85,13 @@ public class RedisService {
 
     public double getTargetPrice() throws IOException {
         String targetPrice = redisTemplate.opsForValue().get("TARGET_PRICE");
+        double DEFAULT_TARGET_PRICE = 10000000d;
         if (targetPrice != null) {
             return Double.parseDouble(targetPrice);
         } else {
             updateTargetPrice();
-            return Double.parseDouble(redisTemplate.opsForValue().get("TARGET_PRICE"));
+            log.warn("목표가 캐싱 오류");
+            return DEFAULT_TARGET_PRICE;
         }
     }
 }
