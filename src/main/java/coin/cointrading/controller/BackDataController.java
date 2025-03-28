@@ -18,11 +18,6 @@ public class BackDataController {
 
     private final BackDataService backDataService;
 
-    @PostConstruct
-    public void initialize() throws IOException {
-        backDataService.initBackData();
-    }
-
     @GetMapping("/auth/get-back-data")
     public List<BackData> getBackData() {
         return backDataService.getBackData();

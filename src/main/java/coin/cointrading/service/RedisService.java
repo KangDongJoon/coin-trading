@@ -24,6 +24,8 @@ public class RedisService {
     private final RedisTemplate<String, String> redisTemplate;
     private final UpbitCandleService upbitCandleService;
     private final ConcurrentHashMap<String, TradingStatus> userStatusMap;
+    private final BackDataService backDataService;
+    private String DEFAULT_TARGET_PRICE;
 
     @PostConstruct
     public void initialize() throws IOException {
@@ -73,7 +75,8 @@ public class RedisService {
     @Scheduled(cron = "20 0 9 * * ?")
     public void updateTargetPrice() throws IOException {
         double targetPrice = upbitCandleService.checkTarget();
-        redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofHours(24));
+        redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofDays(2));
+        DEFAULT_TARGET_PRICE = redisTemplate.opsForValue().get("TARGET_PRICE");
         log.info("목표가 갱신: {}", targetPrice);
         for (String userId : userStatusMap.keySet()) {
             TradingStatus status = userStatusMap.get(userId);
@@ -87,13 +90,16 @@ public class RedisService {
 
     public double getTargetPrice() throws IOException {
         String targetPrice = redisTemplate.opsForValue().get("TARGET_PRICE");
-        double DEFAULT_TARGET_PRICE = 10000000d;
         if (targetPrice != null) {
             return Double.parseDouble(targetPrice);
         } else {
-            updateTargetPrice();
             log.warn("목표가 캐싱 오류");
-            return DEFAULT_TARGET_PRICE;
+            return Double.parseDouble(DEFAULT_TARGET_PRICE);
         }
+    }
+
+    @Scheduled(cron = "0 10 9 * * ?")
+    public void updateDailyBackData() {
+        backDataService.getData("2");
     }
 }
