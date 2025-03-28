@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface BackDataRepository extends JpaRepository<BackData, Long> {
 
-    @Query("SELECT b FROM BackData b WHERE b.tradingStatus = 'O'")
+    @Query("SELECT b FROM BackData b WHERE b.tradingStatus = 'O' ORDER BY b.day DESC")
     List<BackData> findAllActiveTrading();
 
     @Query("SELECT d FROM BackData d ORDER BY d.day DESC")
