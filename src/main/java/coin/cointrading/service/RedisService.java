@@ -25,7 +25,7 @@ public class RedisService {
     private final UpbitCandleService upbitCandleService;
     private final ConcurrentHashMap<String, TradingStatus> userStatusMap;
     private final BackDataService backDataService;
-    private String DEFAULT_TARGET_PRICE;
+    private final SchedulerControlService schedulerControlService;
 
     @PostConstruct
     public void initialize() throws IOException {
@@ -73,30 +73,54 @@ public class RedisService {
 
 
     @Scheduled(cron = "20 0 9 * * ?")
-    public void updateTargetPrice() throws IOException {
-        double targetPrice = upbitCandleService.checkTarget();
-        redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofDays(2));
-        DEFAULT_TARGET_PRICE = redisTemplate.opsForValue().get("TARGET_PRICE");
-        log.info("목표가 갱신: {}", targetPrice);
-        for (String userId : userStatusMap.keySet()) {
-            TradingStatus status = userStatusMap.get(userId);
-            if (!status.getOpMode().get()) {
-                status.getOpMode().set(true);
-                status.getStopLossExecuted().set(false);
-                log.info("{}의 op_mode 활성화", userId);
+    public void updateTargetPrice() {
+        int maxRetries = 10; // 최대 재시도 횟수
+        int attempt = 0;
+        double targetPrice = -1;
+
+        try {
+            schedulerControlService.setUpdatingTargetPrice(true);
+            log.info("🔴 목표가 갱신 중... checkPrice 멈춤");
+
+            while (targetPrice < 0 && attempt < maxRetries) {
+                try {
+                    targetPrice = upbitCandleService.checkTarget();
+                } catch (Exception e) {
+                    attempt++;
+                    log.error("⚠️ 목표가 가져오기 실패 ({}번째 시도) - {}", attempt, e.getMessage());
+                    if (attempt >= maxRetries) {
+                        log.error("🚨 목표가 갱신 실패: 최대 재시도 횟수 초과");
+                        return; // 재시도 초과 시 안전 종료
+                    }
+                }
             }
+
+            // 목표가가 정상적으로 설정되지 않았다면 종료
+            if (targetPrice < 0) {
+                throw new CustomException(ErrorCode.REDIS_NOT_FOUND);
+            }
+
+            redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofDays(2));
+            log.info("✅ 목표가 갱신 완료: {}", targetPrice);
+
+            for (String userId : userStatusMap.keySet()) {
+                TradingStatus status = userStatusMap.get(userId);
+                if (!status.getOpMode().get()) {
+                    status.getOpMode().set(true);
+                    status.getStopLossExecuted().set(false);
+                    log.info("🔹 {}의 op_mode 활성화", userId);
+                }
+            }
+        } finally {
+            schedulerControlService.setUpdatingTargetPrice(false);
+            log.info("🟢 목표가 갱신 완료! checkPrice 재개");
         }
     }
 
+
     public double getTargetPrice() {
         String targetPrice = redisTemplate.opsForValue().get("TARGET_PRICE");
-        if (targetPrice != null) {
-            return Double.parseDouble(targetPrice);
-        } else {
-            log.warn("목표가 캐싱 오류");
-            redisTemplate.opsForValue().set("TARGET_PRICE", DEFAULT_TARGET_PRICE, Duration.ofDays(2));
-            return Double.parseDouble(DEFAULT_TARGET_PRICE);
-        }
+        return Double.parseDouble(targetPrice);
     }
 
     @Scheduled(cron = "0 10 9 * * ?")

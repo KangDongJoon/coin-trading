@@ -10,9 +10,11 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
-import java.io.IOException;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -27,6 +29,9 @@ class TradingServiceTest {
 
     @Mock
     private UpbitService upbitService;
+
+    @Mock
+    private SchedulerControlService schedulerControlService;
 
     private ConcurrentHashMap<String, TradingStatus> userStatusMap;
     private ConcurrentHashMap<String, AuthUser> userAuthMap;
@@ -55,6 +60,7 @@ class TradingServiceTest {
                 userStatusMap,
                 userAuthMap,
                 runningUser,
+                schedulerControlService,
                 upbitService,
                 redisService,
                 executor
@@ -65,7 +71,7 @@ class TradingServiceTest {
     }
 
     @Test
-    void startTrading_success() throws IOException {
+    void startTrading_success() {
         // when & then
         tradingService.startTrading(authUser1);
         assertThat(runningUser.size()).isEqualTo(1);
@@ -78,7 +84,7 @@ class TradingServiceTest {
     }
 
     @Test
-    void stopTrading_success() throws IOException {
+    void stopTrading_success() {
         // given
         tradingService.startTrading(authUser1);
         tradingService.startTrading(authUser2);
@@ -152,7 +158,7 @@ class TradingServiceTest {
     }
 
     @Test
-    void checkStatus_success() throws IOException {
+    void checkStatus_success() {
         // given
         tradingService.startTrading(authUser1);
 

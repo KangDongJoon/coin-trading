@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
 
     REDIS_NOT_FOUND(HttpStatus.NOT_FOUND, "캐싱된 가격이 없습니다."),
+    REDIS_RETRY_FAIL(HttpStatus.NOT_FOUND, "갱신 실패."),
 
     TRADING_ALREADY_GENERATE(HttpStatus.CONFLICT, "이미 프로그램이 동작중입니다."),
     TRADING_NOT_FOUND(HttpStatus.NOT_FOUND, "실행중인 프로그램이 없습니다."),

@@ -11,7 +11,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,15 +27,17 @@ public class TradingService {
     private final ConcurrentHashMap<String, TradingStatus> userStatusMap; // 유저 거래상태 저장 컬렉션
     private final ConcurrentHashMap<String, AuthUser> userAuthMap; // 유저 Auth정보 저장 컬렉션
     private final Set<String> runningUser; // 현재 프로그램을 실행중인 유저를 저장하는 컬렉션
+    private final SchedulerControlService schedulerControlService;
     private final UpbitService upbitService;
     private final RedisService redisService;
     private final ExecutorService executor;
 
     /**
      * 프로그램 실행
+     *
      * @param authUser 로그인 유저
      */
-    public void startTrading(AuthUser authUser) throws IOException {
+    public void startTrading(AuthUser authUser) {
         initProgram(authUser);
         runningUser.add(authUser.getUserId());
         log.info("{}의 프로그램이 실행되었습니다.", authUser.getUserId());
@@ -45,6 +46,7 @@ public class TradingService {
 
     /**
      * 프로그램 종료, 서버에서 상태 및 Auth정보도 함께 삭제
+     *
      * @param authUser 로그인 유저
      */
     public void stopTrading(AuthUser authUser) {
@@ -56,6 +58,7 @@ public class TradingService {
 
     /**
      * 프론트 화면 버튼 전환을 위한 프로그램 실행상태 확인
+     *
      * @param authUser 로그인 유저
      * @return 상태
      */
@@ -66,6 +69,7 @@ public class TradingService {
 
     /**
      * 최초 실행 시 상태 및 Auth정보 서버에 추가
+     *
      * @param authUser 로그인 유저
      */
     private void initProgram(AuthUser authUser) {
@@ -88,7 +92,11 @@ public class TradingService {
      * 1초마다 코인 시세 확인 후 매수, 손절 진행
      */
     @Scheduled(fixedRate = 1000)
-    public void checkPrice() throws IOException {
+    public void checkPrice() {
+        if (schedulerControlService.isUpdatingTargetPrice()) {
+            return;
+        }
+
         double currentPrice = redisService.getCurrentPrice();
         double targetPrice = redisService.getTargetPrice();
 
@@ -116,8 +124,9 @@ public class TradingService {
 
     /**
      * 비동기 처리로 Upbit 매수 API 요청 및 상태 변경
+     *
      * @param authUser 로그인 유저
-     * @param status 유저 거래 상태
+     * @param status   유저 거래 상태
      */
     private void executeAsyncBuy(AuthUser authUser, TradingStatus status) {
         CompletableFuture.supplyAsync(() -> {
@@ -160,8 +169,9 @@ public class TradingService {
 
     /**
      * 비동기 처리로 Upbit 매도 API 요청 및 상태 변경
+     *
      * @param authUser 로그인 유저
-     * @param status 거래 상태
+     * @param status   거래 상태
      */
     private void executeAsyncSell(AuthUser authUser, TradingStatus status) {
         CompletableFuture.supplyAsync(
@@ -189,8 +199,9 @@ public class TradingService {
 
     /**
      * 매수 처리 이후 상태 변경 및 매수금액 확인
-     * @param result 거래 결과
-     * @param status 거래 상태
+     *
+     * @param result   거래 결과
+     * @param status   거래 상태
      * @param authUser 로그인 유저
      */
     private void afterBuy(Object result, TradingStatus status, AuthUser authUser) {
@@ -203,8 +214,9 @@ public class TradingService {
 
     /**
      * 매도 처리 후 상태 변경 및 수익률 확인
-     * @param result 거래 결과
-     * @param status 거래 상태
+     *
+     * @param result   거래 결과
+     * @param status   거래 상태
      * @param authUser 로그인 유저
      */
     private void afterSell(Object result, TradingStatus status, AuthUser authUser) {
