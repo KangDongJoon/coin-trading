@@ -52,7 +52,7 @@ public class RedisService {
         redisTemplate.delete("refresh:" + userId);
     }
 
-    @Scheduled(fixedRate = 1000)
+    @Scheduled(fixedDelay = 1000)
     public void updatePriceCache() throws IOException {
         double currentPrice = upbitCandleService.current();
 

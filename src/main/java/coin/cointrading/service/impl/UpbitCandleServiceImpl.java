@@ -6,25 +6,33 @@ import coin.cointrading.service.UpbitCandleService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import okhttp3.*;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Primary
 public class UpbitCandleServiceImpl implements UpbitCandleService {
 
-    private final String serverUrl = "https://api.upbit.com";
-
     @Override
     public String dayCandle() throws IOException {
-        OkHttpClient client = new OkHttpClient();
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectionPool(new ConnectionPool(5, 5, TimeUnit.MINUTES)) // 최대 5개 연결 유지
+                .dispatcher(new Dispatcher(new ThreadPoolExecutor(
+                        5,  // 코어 스레드 개수
+                        10, // 최대 스레드 개수
+                        60L, TimeUnit.SECONDS,
+                        new LinkedBlockingQueue<>(100) // 최대 100개의 요청을 대기열에 저장
+                )))
+                .build();
+
 
         Request request = new Request.Builder()
                 .url("https://api.upbit.com/v1/candles/days?market=KRW-ETH&count=2")
@@ -51,6 +59,7 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
     public Double current() throws IOException {
         OkHttpClient client = new OkHttpClient();
 
+        String serverUrl = "https://api.upbit.com";
         Request request = new Request.Builder()
                 .url(serverUrl + "/v1/ticker?markets=KRW-ETH")
                 .get()
@@ -61,6 +70,7 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
 
+            assert response.body() != null;
             String jsonResponse = response.body().string();
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode jsonNode = objectMapper.readTree(jsonResponse);
@@ -81,8 +91,7 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
         double lowPrice = yesterday.get("low_price").asDouble();
         double highPrice = yesterday.get("high_price").asDouble();
         double targetPoint = (highPrice - lowPrice) * 0.5;
-        double targetPrice = yesterday.get("trade_price").asDouble() + targetPoint;
 
-        return targetPrice;
+        return yesterday.get("trade_price").asDouble() + targetPoint;
     }
 }

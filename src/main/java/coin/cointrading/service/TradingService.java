@@ -91,7 +91,7 @@ public class TradingService {
     /**
      * 1초마다 코인 시세 확인 후 매수, 손절 진행
      */
-    @Scheduled(fixedRate = 1000)
+    @Scheduled(fixedDelay = 1000)
     public void checkPrice() {
         if (schedulerControlService.isUpdatingTargetPrice()) {
             return;
