@@ -79,7 +79,7 @@ public class RedisService {
         double targetPrice = -1;
 
         try {
-            schedulerControlService.setUpdatingTargetPrice(true);
+            schedulerControlService.setIsProcessing(true);
             log.info("🔴 목표가 갱신 중... checkPrice 멈춤");
 
             while (targetPrice < 0 && attempt < maxRetries) {
@@ -112,7 +112,7 @@ public class RedisService {
                 }
             }
         } finally {
-            schedulerControlService.setUpdatingTargetPrice(false);
+            schedulerControlService.setIsProcessing(false);
             log.info("🟢 목표가 갱신 완료! checkPrice 재개");
         }
     }

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -93,33 +94,51 @@ public class TradingService {
      */
     @Scheduled(fixedDelay = 1000)
     public void checkPrice() {
-        if (schedulerControlService.isUpdatingTargetPrice()) {
+        if (schedulerControlService.getIsProcessing()) {
             return;
         }
 
-        double currentPrice = redisService.getCurrentPrice();
-        double targetPrice = redisService.getTargetPrice();
+        schedulerControlService.setIsProcessing(true); // 🔹 실행 시작 표시
 
-        if (currentPrice >= targetPrice) {
-            processBuy();
-        }
+        try {
+            double currentPrice = redisService.getCurrentPrice();
+            double targetPrice = redisService.getTargetPrice();
 
-        if (currentPrice <= targetPrice * 0.95) {
-            processExecute();
+            if (currentPrice >= targetPrice) {
+                processBuy()
+                        .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
+            } else if (currentPrice <= targetPrice * 0.95) {
+                processExecute()
+                        .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
+            } else {
+                schedulerControlService.setIsProcessing(false);  // 🔹 아무 작업도 하지 않을 때 해제
+            }
+        } catch (Exception e) {
+            log.error("🚨 checkPrice() 실행 중 오류 발생: {}", e.getMessage());
+            schedulerControlService.setIsProcessing(false);
         }
     }
+
 
     /**
      * 조건에 부합하면 매수 진행
      */
-    private void processBuy() {
-        for (String userId : runningUser) {
-            TradingStatus status = userStatusMap.get(userId);
-            if (status.getOpMode().get() && !status.getStopLossExecuted().get() && !status.getHold().get()) {
-                AuthUser authUser = userAuthMap.get(userId);
-                executeAsyncBuy(authUser, status);
-            }
-        }
+    private CompletableFuture<Void> processBuy() {
+        log.info("----------매수 로직 실행 중---------- ");
+
+        List<CompletableFuture<Void>> futures = runningUser.stream()
+                .map(userId -> {
+                    TradingStatus status = userStatusMap.get(userId);
+                    if (status.getOpMode().get() && !status.getStopLossExecuted().get() && !status.getHold().get()) {
+                        AuthUser authUser = userAuthMap.get(userId);
+                        return executeAsyncBuy(authUser, status);
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
     }
 
     /**
@@ -128,8 +147,8 @@ public class TradingService {
      * @param authUser 로그인 유저
      * @param status   유저 거래 상태
      */
-    private void executeAsyncBuy(AuthUser authUser, TradingStatus status) {
-        CompletableFuture.supplyAsync(() -> {
+    private CompletableFuture<Void> executeAsyncBuy(AuthUser authUser, TradingStatus status) {
+        return CompletableFuture.supplyAsync(() -> {  // 🔹 'return' 추가
             try {
                 return upbitService.orderCoins("buy", authUser);
             } catch (Exception e) {
@@ -156,16 +175,25 @@ public class TradingService {
     /**
      * 조건에 부합하면 손전 진행
      */
-    private void processExecute() {
-        for (String userId : runningUser) {
-            TradingStatus status = userStatusMap.get(userId);
-            if (status.getOpMode().get() && !status.getStopLossExecuted().get() && status.getHold().get()) {
-                AuthUser authUser = userAuthMap.get(userId);
-                executeAsyncSell(authUser, status);
-                status.getStopLossExecuted().set(true);
-            }
-        }
+    private CompletableFuture<Void> processExecute() {
+        log.info("----------손절 로직 실행 중---------- ");
+
+        List<CompletableFuture<Void>> futures = runningUser.stream()
+                .map(userId -> {
+                    TradingStatus status = userStatusMap.get(userId);
+                    if (status.getOpMode().get() && !status.getStopLossExecuted().get() && status.getHold().get()) {
+                        AuthUser authUser = userAuthMap.get(userId);
+                        status.getStopLossExecuted().set(true);
+                        return executeAsyncSell(authUser, status);
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull) // ✅ null을 제거하여 올바른 CompletableFuture 리스트 생성
+                .toList();
+
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
     }
+
 
     /**
      * 비동기 처리로 Upbit 매도 API 요청 및 상태 변경
@@ -173,8 +201,9 @@ public class TradingService {
      * @param authUser 로그인 유저
      * @param status   거래 상태
      */
-    private void executeAsyncSell(AuthUser authUser, TradingStatus status) {
-        CompletableFuture.supplyAsync(
+    private CompletableFuture<Void> executeAsyncSell(AuthUser authUser, TradingStatus status) {
+        log.info("----------매도 로직 실행 중---------- ");
+        return CompletableFuture.supplyAsync(
                 () -> {
                     try {
                         return upbitService.orderCoins("sell", authUser);

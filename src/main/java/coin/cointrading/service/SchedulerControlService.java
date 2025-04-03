@@ -2,15 +2,17 @@ package coin.cointrading.service;
 
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 @Service
 public class SchedulerControlService {
-    private volatile boolean isUpdatingTargetPrice = false; // 🔹 상태 변수
+    private AtomicBoolean isProcessing = new AtomicBoolean(false); // 🔹 상태 변수
 
-    public boolean isUpdatingTargetPrice() {
-        return isUpdatingTargetPrice;
+    public boolean getIsProcessing() {
+        return isProcessing.get();
     }
 
-    public void setUpdatingTargetPrice(boolean updating) {
-        this.isUpdatingTargetPrice = updating;
+    public void setIsProcessing(boolean updating) {
+        this.isProcessing.set(updating);
     }
 }
