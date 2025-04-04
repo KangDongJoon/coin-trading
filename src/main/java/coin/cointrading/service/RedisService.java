@@ -56,7 +56,7 @@ public class RedisService {
     public void updatePriceCache() throws IOException {
         double currentPrice = upbitCandleService.current();
 
-        redisTemplate.opsForValue().getAndSet("CURRENT_PRICE", String.valueOf(currentPrice));
+        redisTemplate.opsForValue().set("CURRENT_PRICE", String.valueOf(currentPrice));
 
         redisTemplate.expire("CURRENT_PRICE", Duration.ofSeconds(3));
     }
