@@ -31,7 +31,7 @@ public class RedisService {
     public void initialize() throws IOException {
         updatePriceCache();
         double targetPrice = upbitCandleService.checkTarget();
-        redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofHours(24));
+        redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofDays(2));
         log.info("목표가 최초 갱신: {}", targetPrice);
     }
 
@@ -70,7 +70,6 @@ public class RedisService {
         log.error("{}", ErrorCode.REDIS_NOT_FOUND.getMessage());
         throw new CustomException(ErrorCode.REDIS_NOT_FOUND);
     }
-
 
     @Scheduled(cron = "20 0 9 * * ?")
     public void updateTargetPrice() {
