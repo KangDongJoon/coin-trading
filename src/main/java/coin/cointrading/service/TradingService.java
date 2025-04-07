@@ -108,10 +108,9 @@ public class TradingService {
                 processBuy()
                         .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
             } else if (currentPrice <= targetPrice * 0.95) {
-                processExecute()
-                        .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
+                processExecute();
             } else {
-                schedulerControlService.setIsProcessing(false);  // 🔹 아무 작업도 하지 않을 때 해제
+                schedulerControlService.setIsProcessing(false);
             }
         } catch (Exception e) {
             log.error("🚨 checkPrice() 실행 중 오류 발생: {}", e.getMessage());
@@ -175,7 +174,7 @@ public class TradingService {
     /**
      * 조건에 부합하면 손전 진행
      */
-    private CompletableFuture<Void> processExecute() {
+    private void processExecute() {
         log.info("----------손절 로직 실행 중---------- ");
 
         List<CompletableFuture<Void>> futures = runningUser.stream()
@@ -191,7 +190,7 @@ public class TradingService {
                 .filter(Objects::nonNull) // ✅ null을 제거하여 올바른 CompletableFuture 리스트 생성
                 .toList();
 
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
     }
 
 
