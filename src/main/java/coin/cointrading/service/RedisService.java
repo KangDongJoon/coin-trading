@@ -100,7 +100,9 @@ public class RedisService {
             }
 
             redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofDays(2));
+            setTodayTradeCheck("false");
             log.info("✅ 목표가 갱신 완료: {}", targetPrice);
+            log.info("✅ 매수 여부 초기화");
 
             for (String userId : userStatusMap.keySet()) {
                 TradingStatus status = userStatusMap.get(userId);
@@ -125,5 +127,13 @@ public class RedisService {
     @Scheduled(cron = "0 10 9 * * ?")
     public void updateDailyBackData() {
         backDataService.getData("2");
+    }
+
+    public void setTodayTradeCheck(String bool) {
+        redisTemplate.opsForValue().set("TODAY_TRADE", bool, Duration.ofDays(2));
+    }
+
+    public String getTodayTradeCheck() {
+        return redisTemplate.opsForValue().get("TODAY_TRADE");
     }
 }

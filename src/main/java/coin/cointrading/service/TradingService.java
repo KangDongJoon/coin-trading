@@ -103,11 +103,12 @@ public class TradingService {
         try {
             double currentPrice = redisService.getCurrentPrice();
             double targetPrice = redisService.getTargetPrice();
+            String todayTradeCheck = redisService.getTodayTradeCheck();
 
             if (currentPrice >= targetPrice) {
                 processBuy()
                         .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
-            } else if (currentPrice <= targetPrice * 0.95) {
+            } else if (todayTradeCheck.equals("true") && currentPrice <= targetPrice * 0.95) {
                 processExecute();
             } else {
                 schedulerControlService.setIsProcessing(false);
@@ -137,6 +138,7 @@ public class TradingService {
                 .filter(Objects::nonNull)
                 .toList();
 
+        redisService.setTodayTradeCheck("true");
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
     }
 
