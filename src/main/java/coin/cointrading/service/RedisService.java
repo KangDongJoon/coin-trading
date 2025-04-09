@@ -32,6 +32,7 @@ public class RedisService {
         updatePriceCache();
         double targetPrice = upbitCandleService.checkTarget();
         redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofDays(2));
+        setTodayTradeCheck("false");
         log.info("목표가 최초 갱신: {}", targetPrice);
     }
 
