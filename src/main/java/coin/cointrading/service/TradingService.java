@@ -105,14 +105,17 @@ public class TradingService {
             double targetPrice = redisService.getTargetPrice();
             String todayTradeCheck = redisService.getTodayTradeCheck();
 
-            if (currentPrice >= targetPrice) {
+            if (todayTradeCheck.equals("false") && currentPrice >= targetPrice) {
                 processBuy()
                         .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
-            } else if (todayTradeCheck.equals("true") && currentPrice <= targetPrice * 0.95) {
+            }
+
+            if (todayTradeCheck.equals("true") && currentPrice <= targetPrice * 0.95) {
                 processExecute();
             } else {
                 schedulerControlService.setIsProcessing(false);
             }
+
         } catch (Exception e) {
             log.error("🚨 checkPrice() 실행 중 오류 발생: {}", e.getMessage());
             schedulerControlService.setIsProcessing(false);

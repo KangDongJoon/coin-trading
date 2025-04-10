@@ -130,8 +130,8 @@ public class RedisService {
         backDataService.getData("2");
     }
 
-    public void setTodayTradeCheck(String bool) {
-        redisTemplate.opsForValue().set("TODAY_TRADE", bool, Duration.ofDays(2));
+    public void setTodayTradeCheck(String flag) {
+        redisTemplate.opsForValue().set("TODAY_TRADE", flag, Duration.ofDays(2));
     }
 
     public String getTodayTradeCheck() {
