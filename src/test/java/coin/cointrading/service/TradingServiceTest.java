@@ -102,6 +102,7 @@ class TradingServiceTest {
         // given
         when(redisService.getCurrentPrice()).thenReturn(1600000d);
         when(redisService.getTargetPrice()).thenReturn(1500000d);
+        when(redisService.getTodayTradeCheck()).thenReturn("false");
         runningUser.add(authUser1.getUserId());
         userAuthMap.put(authUser1.getUserId(), authUser1);
         TradingStatus status = new TradingStatus();
