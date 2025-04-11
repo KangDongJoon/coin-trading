@@ -97,7 +97,7 @@ public class RedisService {
 
             // 목표가가 정상적으로 설정되지 않았다면 종료
             if (targetPrice < 0) {
-                throw new CustomException(ErrorCode.REDIS_NOT_FOUND);
+                throw new CustomException(ErrorCode.REDIS_TARGET_PRICE_NOT_FOUND);
             }
 
             redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofDays(2));
@@ -122,6 +122,9 @@ public class RedisService {
 
     public double getTargetPrice() {
         String targetPrice = redisTemplate.opsForValue().get("TARGET_PRICE");
+        if (targetPrice == null) {
+            throw new CustomException(ErrorCode.REDIS_TARGET_PRICE_NOT_FOUND);
+        }
         return Double.parseDouble(targetPrice);
     }
 
