@@ -117,8 +117,7 @@ public class TradingService {
             }
 
         } catch (Exception e) {
-            log.error("🚨 checkPrice() 실행 중 오류 발생: {}", e.getMessage());
-            schedulerControlService.setIsProcessing(false);
+            log.error("🚨 checkPrice() 실행 중 오류 발생: {}, 스케쥴링 중지", e.getMessage());
         }
     }
 
