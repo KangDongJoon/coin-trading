@@ -28,18 +28,17 @@ services:
     command: >
       redis-server 
       --appendonly yes 
-      --requirepass ${REDIS_PASSWORD}
+      --requirepass ${DB_PASSWORD}
     volumes:
       - redis-data:/data
     networks:
       - app-network
     restart: always
     healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "yourStrongPassword", "ping" ]
+      test: [ "CMD", "redis-cli", "-a", "${DB_PASSWORD}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
-
 
   cointrading:
     image: ${DOCKER_USERNAME}/cointrading:latest
