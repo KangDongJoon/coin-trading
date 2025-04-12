@@ -75,6 +75,7 @@ jobs:
             echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> ~/.env
             echo "ROOT_PASSWORD=${{ secrets.ROOT_PASSWORD }}" >> ~/.env
             echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> ~/.env
+            echo "REDIS_PASSWORD=${{ secrets.DB_PASSWORD }}" >> ~/.env
 
             # 최신 Docker 이미지 풀
             docker stop cointrading || true
