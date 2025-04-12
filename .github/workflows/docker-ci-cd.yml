@@ -67,7 +67,7 @@ jobs:
             fi
 
             # 환경 변수 파일 생성 (.env)
-            echo "REDIS_HOST=redis" > ~/.env
+            echo "REDIS_HOST=redis" > .env
             echo "DB_URL=jdbc:mysql://mysql:3306/cointrading" >> .env
             echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
@@ -75,7 +75,7 @@ jobs:
             echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
             echo "ROOT_PASSWORD=${{ secrets.ROOT_PASSWORD }}" >> .env
             echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
-            echo "REDIS_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
 
             # 최신 Docker 이미지 풀
             docker stop cointrading || true
