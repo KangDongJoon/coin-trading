@@ -22,24 +22,24 @@ services:
 
   redis:
     image: redis:latest
+    container_name: redis
+    environment:
+      - REDIS_PASSWORD=${DB_PASSWORD}
     command: >
       redis-server 
       --appendonly yes 
-      --protected-mode no 
-      --slave-read-only no
-    container_name: redis
-    ports:
-      - "6379:6379"
+      --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis-data:/data
     networks:
       - app-network
     restart: always
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: [ "CMD", "redis-cli", "-a", "yourStrongPassword", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
+
 
   cointrading:
     image: ${DOCKER_USERNAME}/cointrading:latest
