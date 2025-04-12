@@ -47,6 +47,7 @@ services:
       - TZ=Asia/Seoul
       - DB_HOST=mysql
       - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - AES_SECRET_KEY=${AES_SECRET_KEY}
       - DB_URL=${DB_URL}
