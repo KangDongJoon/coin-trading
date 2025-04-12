@@ -17,7 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.List;
 public class BackDataService {
 
     private final BackDataRepository backDataRepository;
+    private final OkHttpClient okHttpClient;
 
     @PostConstruct
     public void postBackData() {
@@ -51,6 +53,7 @@ public class BackDataService {
         return backDataRepository.findAllActiveTrading();
     }
 
+    // 7일, 30일, 100일 백데이터 조회 메소드 추가 예시
     public List<BackData> get7BackData() {
         return backDataRepository.findAllActiveTrading();
     }
@@ -65,42 +68,55 @@ public class BackDataService {
 
     @Transactional
     public void getData(String day) {
-        OkHttpClient client = new OkHttpClient();
-
         String url = "https://api.upbit.com/v1/candles/days?market=KRW-ETH&count=" + day;
-        // 1=29, 2=29,28, 00~09시사이면
+        try {
+            // API 호출
+            String jsonResponse = fetchApiData(url);
+
+            // JSON 파싱
+            UpbitCandle[] candles = parseCandleData(jsonResponse);
+
+            // 시간 계산 (이전과 동일)
+            int hour = ZonedDateTime.now(ZoneId.of("Asia/Seoul")).getHour();
+            int j = hour >= 0 && hour < 9 ? 1 : 0;
+            for (int i = candles.length - 2; i >= j; i--) {
+                String days = candles[i].getCandleDateTimeKst().substring(0, 10);
+                double targetPrice = candles[i + 1].getTradePrice() + (candles[i + 1].getHighPrice() - candles[i + 1].getLowPrice()) * 0.5;
+                double todayHighPrice = candles[i].getHighPrice();
+                String tradingStatus = todayHighPrice >= targetPrice ? "O" : "X";
+                double returnRate = Math.round((((candles[i].getTradePrice() - targetPrice) / targetPrice) * 100) * 10.0) / 10.0;
+
+                // DB 저장
+                saveBackData(days, tradingStatus, returnRate);
+            }
+        } catch (IOException e) {
+            log.error("API 호출 중 오류 발생: {}", e.getMessage(), e);
+            throw new IllegalArgumentException("데이터를 가져오는 중 오류가 발생했습니다.", e);
+        }
+    }
+
+    private String fetchApiData(String url) throws IOException {
         Request request = new Request.Builder()
                 .url(url)
                 .get()
                 .addHeader("accept", "application/json")
                 .build();
 
-        // try-with-resources 구문을 사용하여 자동으로 닫히도록 함
-        try (Response response = client.newCall(request).execute()) {
-            String jsonResponse = response.body().string();
-
-            // Jackson을 이용한 JSON 파싱
-            ObjectMapper objectMapper = new ObjectMapper();
-            UpbitCandle[] candles = objectMapper.readValue(jsonResponse, UpbitCandle[].class);
-
-            int hour = LocalTime.now().getHour();
-            int j = hour >= 0 && hour < 9 ? 1 : 0;
-            for (int i = candles.length - 2; i >= j; i--) {
-                String days = candles[i].getCandleDateTimeKst().substring(0, 10); // 2025-02-16
-                double targetPrice = candles[i + 1].getTradePrice() + (candles[i + 1].getHighPrice() - candles[i + 1].getLowPrice()) * 0.5;
-                double todayHighPrice = candles[i].getHighPrice();
-                String tradingStatus = todayHighPrice >= targetPrice ? "O" : "X";
-                double returnRate = Math.round((((candles[i].getTradePrice() - targetPrice) / targetPrice) * 100) * 10.0) / 10.0;
-
-                BackData backData = new BackData(
-                        days,
-                        tradingStatus,
-                        returnRate);
-
-                backDataRepository.save(backData);
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("API 호출 실패: " + response);
             }
-        } catch (IOException e) {
-            throw new IllegalArgumentException("오류 발생: " + e.getMessage(), e);  // IOException을 IllegalArgumentException으로 감싸서 던짐
+            return response.body().string();
         }
+    }
+
+    private UpbitCandle[] parseCandleData(String jsonResponse) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        return objectMapper.readValue(jsonResponse, UpbitCandle[].class);
+    }
+
+    private void saveBackData(String day, String tradingStatus, double returnRate) {
+        BackData backData = new BackData(day, tradingStatus, returnRate);
+        backDataRepository.save(backData);
     }
 }

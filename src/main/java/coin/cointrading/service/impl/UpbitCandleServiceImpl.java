@@ -6,34 +6,26 @@ import coin.cointrading.service.UpbitCandleService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.*;
+import lombok.RequiredArgsConstructor;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @Primary
+@RequiredArgsConstructor
 public class UpbitCandleServiceImpl implements UpbitCandleService {
+
+    private final OkHttpClient okHttpClient; // OkHttpClient는 자동 주입
 
     @Override
     public String dayCandle() throws IOException {
-        OkHttpClient client = new OkHttpClient.Builder()
-                .connectionPool(new ConnectionPool(5, 5, TimeUnit.MINUTES)) // 최대 5개 연결 유지
-                .dispatcher(new Dispatcher(new ThreadPoolExecutor(
-                        5,  // 코어 스레드 개수
-                        10, // 최대 스레드 개수
-                        60L, TimeUnit.SECONDS,
-                        new LinkedBlockingQueue<>(100) // 최대 100개의 요청을 대기열에 저장
-                )))
-                .build();
-
-
         Request request = new Request.Builder()
                 .url("https://api.upbit.com/v1/candles/days?market=KRW-ETH&count=2")
                 .get()
@@ -41,7 +33,7 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
                 .build();
 
         // try-with-resources 구문을 사용하여 자동으로 닫히도록 함
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = okHttpClient.newCall(request).execute()) {
             String jsonResponse = response.body().string();
 
             // Jackson을 이용한 JSON 파싱
@@ -57,8 +49,6 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
 
     @Override
     public Double current() throws IOException {
-        OkHttpClient client = new OkHttpClient();
-
         String serverUrl = "https://api.upbit.com";
         Request request = new Request.Builder()
                 .url(serverUrl + "/v1/ticker?markets=KRW-ETH")
@@ -67,7 +57,7 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
                 .build();
 
         // try-with-resources를 사용하여 자동으로 response 닫기
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = okHttpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
 
             assert response.body() != null;
@@ -85,8 +75,7 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
         String candle = dayCandle();
         ObjectMapper objectMapper = new ObjectMapper();
 
-        List<JsonNode> candles = objectMapper.readValue(candle, new TypeReference<>() {
-        });
+        List<JsonNode> candles = objectMapper.readValue(candle, new TypeReference<>() {});
         JsonNode yesterday = candles.get(1);
         double lowPrice = yesterday.get("low_price").asDouble();
         double highPrice = yesterday.get("high_price").asDouble();
