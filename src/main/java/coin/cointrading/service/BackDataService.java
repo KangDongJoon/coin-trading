@@ -76,16 +76,17 @@ public class BackDataService {
             // JSON 파싱
             UpbitCandle[] candles = parseCandleData(jsonResponse);
 
-            // 시간 계산 (이전과 동일)
+            // 시간 계산
             int hour = ZonedDateTime.now(ZoneId.of("Asia/Seoul")).getHour();
-            int j = hour >= 0 && hour < 9 ? 1 : 0;
-            for (int i = candles.length - 2; i >= j; i--) {
+            int j = hour >= 0 && hour < 9 ? 2 : 1;
+            for (int i = j; i < candles.length; i++) {
                 String days = candles[i].getCandleDateTimeKst().substring(0, 10);
-                double targetPrice = candles[i + 1].getTradePrice() + (candles[i + 1].getHighPrice() - candles[i + 1].getLowPrice()) * 0.5;
+                double targetPrice = candles[i].getTradePrice() + (candles[i].getHighPrice() - candles[i].getLowPrice()) * 0.5;
                 double todayHighPrice = candles[i].getHighPrice();
                 String tradingStatus = todayHighPrice >= targetPrice ? "O" : "X";
                 double returnRate = Math.round((((candles[i].getTradePrice() - targetPrice) / targetPrice) * 100) * 10.0) / 10.0;
 
+                System.out.println(days);
                 // DB 저장
                 saveBackData(days, tradingStatus, returnRate);
             }
