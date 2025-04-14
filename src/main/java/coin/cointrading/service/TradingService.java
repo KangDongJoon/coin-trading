@@ -270,4 +270,20 @@ public class TradingService {
         log.info("쓰레드슬립");
         processSell();
     }
+
+    public void opChange() {
+        for (String userId : runningUser) {
+            TradingStatus status = userStatusMap.get(userId);
+            status.getOpMode().set(true);
+            log.info("{}의 op_mode 변경완료: {}", userId, status.getOpMode().get());
+        }
+    }
+
+    public void holdChange() {
+        for (String userId : runningUser) {
+            TradingStatus status = userStatusMap.get(userId);
+            status.getHold().set(true);
+            log.info("{}의 hold 변경완료: {}", userId, status.getHold().get());
+        }
+    }
 }

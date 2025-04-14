@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,14 +59,6 @@ public class TradingController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/v1/initbackdata")
-    public void initBackData() throws IOException {
-    }
-
-    @PostMapping("/v1/backdata")
-    public void postBackData() throws IOException {
-    }
-
     @GetMapping("/v1/backdata")
     public List<BackData> getBackData() {
         return null;
@@ -88,6 +79,20 @@ public class TradingController {
     public void testAsync() throws InterruptedException {
         tradingService.asyncTest();
         log.info("비동기 매수매도 실행-Controller");
+    }
+
+    @GetMapping("/test/op-change")
+    public void opChange() {
+        log.info("-----실행중인 유저 op_mode 변경-----");
+        tradingService.opChange();
+        log.info("-----op_mode 변경완료-----");
+    }
+
+    @GetMapping("/test/buy-change")
+    public void holdChange() {
+        log.info("-----실행중인 유저 buy_status 변경-----");
+        tradingService.holdChange();
+        log.info("-----hold 변경완료-----");
     }
 }
 
