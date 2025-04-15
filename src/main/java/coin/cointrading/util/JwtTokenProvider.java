@@ -12,15 +12,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 @Component
 @RequiredArgsConstructor
 public class JwtTokenProvider {
 
-    private String accessKey;
-    private String secretKey;
     @Value("${jwt.secret.key}")
     private String jwtSecretKey;
     private final AES256Util aes256Util;
@@ -53,8 +53,8 @@ public class JwtTokenProvider {
     }
 
     public String createAccountToken(AuthUser authUser) throws Exception {
-        secretKey = aes256Util.decrypt(authUser.getUpbitSecretKey());
-        accessKey = aes256Util.decrypt(authUser.getUpbitAccessKey());
+        String accessKey  = aes256Util.decrypt(authUser.getUpbitAccessKey());
+        String secretKey = aes256Util.decrypt(authUser.getUpbitSecretKey());
 
         Algorithm algorithm = Algorithm.HMAC256(secretKey);
         String jwtToken = JWT.create()
@@ -66,8 +66,8 @@ public class JwtTokenProvider {
     }
 
     public String createOrderToken(HashMap<String, String> params, AuthUser authUser) throws Exception {
-        secretKey = aes256Util.decrypt(authUser.getUpbitSecretKey());
-        accessKey = aes256Util.decrypt(authUser.getUpbitAccessKey());
+        String accessKey  = aes256Util.decrypt(authUser.getUpbitAccessKey());
+        String secretKey = aes256Util.decrypt(authUser.getUpbitSecretKey());
 
         ArrayList<String> queryElements = new ArrayList<>();
         for (Map.Entry<String, String> entity : params.entrySet()) {
@@ -76,38 +76,16 @@ public class JwtTokenProvider {
 
         String queryString = String.join("&", queryElements.toArray(new String[0]));
 
-        MessageDigest md = MessageDigest.getInstance("SHA-512");
-        md.update(queryString.getBytes("UTF-8"));
-
-        String queryHash = String.format("%0128x", new BigInteger(1, md.digest()));
-
-        Algorithm algorithm = Algorithm.HMAC256(secretKey);
-        String jwtToken = JWT.create()
-                .withClaim("access_key", accessKey)
-                .withClaim("nonce", UUID.randomUUID().toString())
-                .withClaim("query_hash", queryHash)
-                .withClaim("query_hash_alg", "SHA512")
-                .sign(algorithm);
+        String jwtToken = getJwtToken(queryString, secretKey, accessKey);
 
         return "Bearer " + jwtToken;
     }
 
     public String createGetOrderToken(String queryString, AuthUser authUser) throws Exception {
-        secretKey = aes256Util.decrypt(authUser.getUpbitSecretKey());
-        accessKey = aes256Util.decrypt(authUser.getUpbitAccessKey());
+        String accessKey  = aes256Util.decrypt(authUser.getUpbitAccessKey());
+        String secretKey = aes256Util.decrypt(authUser.getUpbitSecretKey());
 
-        MessageDigest md = MessageDigest.getInstance("SHA-512");
-        md.update(queryString.getBytes("UTF-8"));
-
-        String queryHash = String.format("%0128x", new BigInteger(1, md.digest()));
-
-        Algorithm algorithm = Algorithm.HMAC256(secretKey);
-        String jwtToken = JWT.create()
-                .withClaim("access_key", accessKey)
-                .withClaim("nonce", UUID.randomUUID().toString())
-                .withClaim("query_hash", queryHash)
-                .withClaim("query_hash_alg", "SHA512")
-                .sign(algorithm);
+        String jwtToken = getJwtToken(queryString, secretKey, accessKey);
 
         return "Bearer " + jwtToken;
     }
@@ -147,6 +125,21 @@ public class JwtTokenProvider {
         } catch (JWTVerificationException exception) {
             throw new RuntimeException("JWT 토큰 검증 실패", exception);
         }
+    }
+
+    private static String getJwtToken(String queryString, String secretKey, String accessKey) throws NoSuchAlgorithmException {
+        MessageDigest md = MessageDigest.getInstance("SHA-512");
+        md.update(queryString.getBytes(StandardCharsets.UTF_8));
+
+        String queryHash = String.format("%0128x", new BigInteger(1, md.digest()));
+
+        Algorithm algorithm = Algorithm.HMAC256(secretKey);
+        return JWT.create()
+                .withClaim("access_key", accessKey)
+                .withClaim("nonce", UUID.randomUUID().toString())
+                .withClaim("query_hash", queryHash)
+                .withClaim("query_hash_alg", "SHA512")
+                .sign(algorithm);
     }
 
 }
