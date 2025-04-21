@@ -94,6 +94,7 @@ public class TradingController {
         tradingService.holdChange();
         log.info("-----hold 변경완료-----");
     }
+
 }
 
 

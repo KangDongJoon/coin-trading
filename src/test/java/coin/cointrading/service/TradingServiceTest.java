@@ -10,6 +10,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -172,6 +174,31 @@ class TradingServiceTest {
         assertThat(status1).isEqualTo("true");
         assertThat(status2).isEqualTo("false");
 
+    }
+
+    @Test
+    void afterSell() {
+        // given & when
+        Map<String, Object> buyOrder = new HashMap<>();
+        buyOrder.put("paid_fee", "500");
+        buyOrder.put("executed_funds", "1000000");
+        double paid_fee_buy = Double.parseDouble((String) buyOrder.get(("paid_fee")));
+        double executed_funds_buy = Double.parseDouble((String) buyOrder.get(("executed_funds")));
+        double buyPrice = Math.round(paid_fee_buy + executed_funds_buy);
+
+        Map<String, Object> sellOrder = new HashMap<>();
+        sellOrder.put("paid_fee", "550");
+        sellOrder.put("executed_funds", "1100000");
+        double paid_fee_sell = Double.parseDouble((String) sellOrder.get("paid_fee"));
+        double executed_funds_sell = Double.parseDouble((String) sellOrder.get("executed_funds"));
+        double sellPrice = Math.round(executed_funds_sell - paid_fee_sell);
+
+        double ror = (sellPrice - buyPrice) / buyPrice * 100;
+        String formatted = String.format("%.1f%%", ror);
+        System.out.println("formatted = " + formatted);
+
+        // then
+        assertThat(formatted).isEqualTo("9.9%");
     }
 }
 

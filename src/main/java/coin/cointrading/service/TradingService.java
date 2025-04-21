@@ -218,7 +218,7 @@ public class TradingService {
                 CompletableFuture.supplyAsync(
                         () -> {
                             try {
-                                return upbitService.getOrders(authUser, 1);
+                                return upbitService.getOrders(authUser, 2);
                             } catch (Exception e) {
                                 log.error(e.getMessage());
                                 throw new CustomException(ErrorCode.UPBIT_ORDER_LIST_READ_FAIL);
@@ -253,15 +253,24 @@ public class TradingService {
     private void afterSell(Object result, TradingStatus status, AuthUser authUser) {
         status.getOpMode().set(false);
         status.getHold().set(false);
+
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> orders = (List<Map<String, Object>>) result;
-        Map<String, Object> order = orders.get(0);
-        Double executedFunds = Double.parseDouble((String) order.get("executed_funds"));
-        Double paidFee = Double.parseDouble((String) order.get("paid_fee"));
-        double sellLocked = Math.round(executedFunds - paidFee);
-        double locked = status.getBuyPrice().get();
-        double ror = Math.round((sellLocked - locked) / locked * 10.0) / 10.0;
-        log.info("{}의 매도 수익률: {}%", authUser.getUserId(), ror);
+
+        Map<String, Object> buyOrder = orders.get(1);
+        double paid_fee_buy = Double.parseDouble((String) buyOrder.get(("paid_fee")));
+        double executed_funds_buy = Double.parseDouble((String) buyOrder.get(("executed_funds")));
+        double buyPrice = Math.round(paid_fee_buy + executed_funds_buy);
+
+        Map<String, Object> sellOrder = orders.get(0);
+        double paid_fee_sell = Double.parseDouble((String) sellOrder.get("paid_fee"));
+        double executed_funds_sell = Double.parseDouble((String) sellOrder.get("executed_funds"));
+        double sellPrice = Math.round(executed_funds_sell - paid_fee_sell);
+
+        double ror = (sellPrice - buyPrice) / buyPrice * 100;
+        String formatted = String.format("%.1f%%", ror);
+
+        log.info("{}의 매도 수익률: {}%", authUser.getUserId(), formatted);
     }
 
     public void asyncTest() throws InterruptedException {
