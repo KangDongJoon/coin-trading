@@ -78,15 +78,16 @@ public class BackDataService {
 
             // 시간 계산
             int hour = ZonedDateTime.now(ZoneId.of("Asia/Seoul")).getHour();
-            int j = hour >= 0 && hour < 9 ? 2 : 1;
-            for (int i = j; i < candles.length; i++) {
+            int j = hour < 9 ? 2 : 1;
+            for (int i = j; i < candles.length - 1; i++) {
                 String days = candles[i].getCandleDateTimeKst().substring(0, 10);
-                double targetPrice = candles[i].getTradePrice() + (candles[i].getHighPrice() - candles[i].getLowPrice()) * 0.5;
+                double targetPrice = candles[i + 1].getTradePrice() + (candles[i + 1].getHighPrice() - candles[i + 1].getLowPrice()) * 0.5;
                 double todayHighPrice = candles[i].getHighPrice();
                 String tradingStatus = todayHighPrice >= targetPrice ? "O" : "X";
-                double returnRate = Math.round((((candles[i].getTradePrice() - targetPrice) / targetPrice) * 100) * 10.0) / 10.0;
+                double todayTradePrice = candles[i].getTradePrice();
+                double returnRate = (todayTradePrice - targetPrice) / targetPrice * 100;
+                returnRate = Math.round(returnRate * 10.0) / 10.0;
 
-                System.out.println(days);
                 // DB 저장
                 saveBackData(days, tradingStatus, returnRate);
             }
