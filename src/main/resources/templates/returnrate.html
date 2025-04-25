@@ -86,7 +86,9 @@
         try {
             const response = await fetch(API_URL);
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                console.error(`HTTP error! Status: ${response.status}`);
+                tableBody.innerHTML = `<tr><td colspan="3" class="error-message">❌ 데이터 로드 실패 (Status: ${response.status})</td></tr>`;
+                return;
             }
             allData = await response.json();
             renderTable();
