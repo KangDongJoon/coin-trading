@@ -33,6 +33,23 @@
 <body>
 
 <h2>BackData Table</h2>
+
+<!-- 평균 수익률 표시 -->
+<div id="average-return" style="margin-top: 10px; font-weight: bold;"></div>
+
+<!-- 드롭다운 메뉴 -->
+<div style="margin-bottom: 10px;">
+    <label for="data-count-select">표시할 데이터 수:</label>
+    <select id="data-count-select" onchange="handleSelectChange(this)">
+        <option value="7">최근 7거래일</option>
+        <option value="30">최근 30거래일</option>
+        <option value="90">최근 90거래일</option>
+    </select>
+</div>
+
+<!-- 날짜 구간 표시 -->
+<div id="date-range" style="margin-bottom: 10px; font-weight: bold;"></div>
+
 <table>
     <thead>
     <tr>
@@ -42,19 +59,25 @@
     </tr>
     </thead>
     <tbody id="table-body">
-    <!-- 로딩 중 메시지 -->
     <tr id="loading-row">
         <td colspan="3">📊 데이터를 불러오는 중...</td>
     </tr>
     </tbody>
 </table>
-
 <script>
     const API_BASE_URL = window.location.origin.includes("localhost")
-        ? "http://localhost:8080"  // 로컬 환경에서 사용할 API
-        : "http://43.201.244.141:8080"; // 배포 환경에서 사용할 API
+        ? "http://localhost:8080"
+        : "http://43.201.244.141:8080";
 
-    const API_URL = `${API_BASE_URL}/auth/get-back-data`; // 정확한 API 경로
+    const API_URL = `${API_BASE_URL}/auth/get-back-data`;
+    let allData = [];
+    let dataCount = 7; // 기본값
+
+    // 드롭다운 변경 시 호출
+    function handleSelectChange(selectElement) {
+        dataCount = parseInt(selectElement.value);
+        renderTable();
+    }
 
     async function fetchData() {
         const tableBody = document.getElementById("table-body");
@@ -65,34 +88,67 @@
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
-            const data = await response.json();  // 백엔드에서 받아온 JSON 데이터
-
-            tableBody.innerHTML = ""; // 기존 데이터 초기화
-
-            // 데이터 표시
-            data.forEach(item => {
-                const row = document.createElement("tr");
-
-                // 수익률 색상 적용
-                const returnRateColor = item.returnRate >= 0 ? "green" : "red";
-
-                row.innerHTML = `
-                    <td>${item.day}</td>
-                    <td>${item.tradingStatus}</td>
-                    <td style="color: ${returnRateColor}; font-weight: bold;">${item.returnRate}%</td>
-                `;
-                tableBody.appendChild(row);
-            });
-
+            allData = await response.json();
+            renderTable();
         } catch (error) {
             console.error("데이터 불러오기 실패:", error);
             tableBody.innerHTML = `<tr><td colspan="3" class="error-message">❌ 데이터 로드 실패</td></tr>`;
         }
     }
 
-    fetchData();  // 페이지 로드 시 데이터 가져오기
-    setInterval(fetchData, 600000); // 1시간마다 데이터 갱신
+    function renderTable() {
+        const tableBody = document.getElementById("table-body");
+        const avgReturnEl = document.getElementById("average-return");
+        const dateRangeEl = document.getElementById("date-range");
+
+        tableBody.innerHTML = "";
+
+        const limit = Math.min(dataCount, allData.length);
+        const selectedData = allData.slice(0, limit);
+
+        let totalReturn = 0;
+
+        selectedData.forEach(item => {
+            const row = document.createElement("tr");
+            const returnRateColor = item.returnRate >= 0 ? "green" : "red";
+
+            row.innerHTML = `
+        <td>${item.day}</td>
+        <td>${item.tradingStatus}</td>
+        <td style="color: ${returnRateColor}; font-weight: bold;">${item.returnRate}%</td>
+        `;
+            tableBody.appendChild(row);
+
+            totalReturn += item.returnRate;
+        });
+
+        const avgReturn = selectedData.length > 0 ? (totalReturn).toFixed(2) : 0;
+        const avgColor = avgReturn >= 0 ? "green" : "red";
+
+        avgReturnEl.innerHTML = `
+    📈 누적 수익률(복리 계산 X) (${limit}거래일):
+    <span style="color: ${avgColor}">${avgReturn}%</span>
+    ${limit < dataCount ? `<span style="color: gray;">(현재 저장된 ${allData.length} 거래일 까지만 표시됨)</span>` : ""}
+    `;
+
+        // 날짜 범위 계산 및 표시
+        if (selectedData.length >= 2) {
+            const startDate = new Date(selectedData[selectedData.length - 1].day);
+            const endDate = new Date(selectedData[0].day);
+
+            const diffTime = Math.abs(endDate - startDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // 시작일 포함
+
+            dateRangeEl.innerHTML = `📅 기간: ${selectedData[selectedData.length - 1].day} ~ ${selectedData[0].day} (${diffDays}일)`;
+        } else {
+            dateRangeEl.innerHTML = "";
+        }
+    }
+
+    fetchData();
+    setInterval(fetchData, 600000);
 </script>
 
 </body>
+
 </html>
