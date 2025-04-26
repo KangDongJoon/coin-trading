@@ -41,7 +41,7 @@ public class BackDataService {
         if (latestDataList != null && !latestDataList.isEmpty()) {
             BackData latestData = latestDataList.get(0);  // 첫 번째 데이터 가져오기
             LocalDate latestDay = LocalDate.parse(latestData.getDay(), DateTimeFormatter.ISO_DATE);
-            int daysBetween = (int) ChronoUnit.DAYS.between(latestDay, today);
+            int daysBetween = (int) ChronoUnit.DAYS.between(latestDay, today) + 1;
             getData(String.valueOf(daysBetween));
         } else {
             log.warn("데이터가 없습니다. 기초 데이터를 업데이트합니다.");
@@ -50,19 +50,6 @@ public class BackDataService {
     }
 
     public List<BackData> getBackData() {
-        return backDataRepository.findAllActiveTrading();
-    }
-
-    // 7일, 30일, 100일 백데이터 조회 메소드 추가 예시
-    public List<BackData> get7BackData() {
-        return backDataRepository.findAllActiveTrading();
-    }
-
-    public List<BackData> get30BackData() {
-        return backDataRepository.findAllActiveTrading();
-    }
-
-    public List<BackData> get100BackData() {
         return backDataRepository.findAllActiveTrading();
     }
 
