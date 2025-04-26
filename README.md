@@ -15,36 +15,41 @@
 
 -----------------------
 
-![image](https://github.com/user-attachments/assets/eb96f1cd-7d8c-4e1e-8424-88867fdf6509)
+![image](https://github.com/user-attachments/assets/58de3cf9-7103-439b-9a51-c4968218408f)
+
 
 
 
 ## 🤖 기술 스택
 
 -----------------------
-<div>
-<h3>언어 & 프레임워크</h3>
-      <div>
-        <img src="https://img.shields.io/badge/java-1E8CBE.svg?style=for-the-badge&logo=java&logoColor=white">
-        <img src="https://img.shields.io/badge/spring boot-%236DB33F.svg?style=for-the-badge&logo=spring boot&logoColor=white">
-        <img src="https://img.shields.io/badge/spring security-6DB33F?style=for-the-badge&logo=spring security&logoColor=white" alt="spring security Badge">
-        <img src="https://img.shields.io/badge/jwt-000000?style=for-the-badge&logo=json web tokens&logoColor=white" alt="jwt Badge">
-        <img src="https://img.shields.io/badge/jpa-527FFF?style=for-the-badge&logo=jpa&logoColor=white" alt="jpa Badge">
-      </div>
-<h3>데이터베이스</h3>
-      <div>
-        <img src="https://img.shields.io/badge/mysql-4479A1.svg?style=for-the-badge&logo=mysql&logoColor=white">
-        <img src="https://img.shields.io/badge/redis-%23DD0031.svg?style=for-the-badge&logo=redis&logoColor=white">
-      </div>
-<h3>CI / CD</h3>
-      <div>
-        <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white">
-        <img src="https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white">
-      </div>
-<h3>클라우드</h3>
-      <div>
-        <img src="https://img.shields.io/badge/ecs-FF9900?style=for-the-badge&logo=amazon ecs&logoColor=white" alt="ECS Badge">
-        <img src="https://img.shields.io/badge/ec2-FF9900?style=for-the-badge&logo=amazon ec2&logoColor=white" alt="EC2 Badge">
-      </div>
+<div class="tech-stack">
+  <h3>언어 & 프레임워크</h3>
+  <div class="badge-container">
+    <img src="https://img.shields.io/badge/java-1E8CBE.svg?style=for-the-badge&logo=java&logoColor=white">
+    <img src="https://img.shields.io/badge/spring boot-6DB33F.svg?style=for-the-badge&logo=springboot&logoColor=white">
+    <img src="https://img.shields.io/badge/spring security-6DB33F?style=for-the-badge&logo=springsecurity&logoColor=white" alt="spring security Badge">
+    <img src="https://img.shields.io/badge/jwt-000000?style=for-the-badge&logo=jsonwebtoken&logoColor=white" alt="jwt Badge">
+    <img src="https://img.shields.io/badge/jpa-527FFF?style=for-the-badge&logo=hibernate&logoColor=white" alt="jpa Badge">
+  </div>
+
+  <h3>데이터베이스</h3>
+  <div class="badge-container">
+    <img src="https://img.shields.io/badge/mysql-4479A1.svg?style=for-the-badge&logo=mysql&logoColor=white">
+    <img src="https://img.shields.io/badge/redis-DD0031.svg?style=for-the-badge&logo=redis&logoColor=white">
+  </div>
+
+  <h3>CI / CD</h3>
+  <div class="badge-container">
+    <img src="https://img.shields.io/badge/docker-0db7ed.svg?style=for-the-badge&logo=docker&logoColor=white">
+    <img src="https://img.shields.io/badge/github actions-2671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white">
+  </div>
+
+  <h3>클라우드</h3>
+  <div class="badge-container">
+    <img src="https://img.shields.io/badge/ecs-FF9900?style=for-the-badge&logo=amazonecs&logoColor=white" alt="ECS Badge">
+    <img src="https://img.shields.io/badge/ec2-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white" alt="EC2 Badge">
+  </div>
 </div>
+
 
