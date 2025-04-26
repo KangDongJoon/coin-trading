@@ -21,6 +21,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -31,6 +32,7 @@ public class BackDataService {
 
     private final BackDataRepository backDataRepository;
     private final OkHttpClient okHttpClient;
+    private List<BackData> backDataCache = new ArrayList<>();
 
     @PostConstruct
     public void postBackData() {
@@ -47,10 +49,11 @@ public class BackDataService {
             log.warn("데이터가 없습니다. 기초 데이터를 업데이트합니다.");
             getData("200");
         }
+        this.backDataCache = backDataRepository.findAll();
     }
 
     public List<BackData> getBackData() {
-        return backDataRepository.findAllActiveTrading();
+        return backDataCache;
     }
 
     @Transactional
@@ -75,8 +78,9 @@ public class BackDataService {
                 double returnRate = (todayTradePrice - targetPrice) / targetPrice * 100;
                 returnRate = Math.round(returnRate * 10.0) / 10.0;
 
-                // DB 저장
-                saveBackData(days, tradingStatus, returnRate);
+                // DB 및 캐시 저장
+                BackData backData = saveBackData(days, tradingStatus, returnRate);
+                backDataCache.add(backData);
             }
         } catch (IOException e) {
             log.error("API 호출 중 오류 발생: {}", e.getMessage(), e);
@@ -104,8 +108,9 @@ public class BackDataService {
         return objectMapper.readValue(jsonResponse, UpbitCandle[].class);
     }
 
-    private void saveBackData(String day, String tradingStatus, double returnRate) {
+    private BackData saveBackData(String day, String tradingStatus, double returnRate) {
         BackData backData = new BackData(day, tradingStatus, returnRate);
         backDataRepository.save(backData);
+        return backData;
     }
 }
