@@ -105,38 +105,42 @@
 
         tableBody.innerHTML = "";
 
-        const limit = Math.min(dataCount, allData.length);
-        const selectedData = allData.slice(0, limit);
+        const filteredData = allData
+            .filter(item => item.tradingStatus === 'O')
+            .sort((a, b) => new Date(b.day) - new Date(a.day));  // 날짜 내림차순 정렬
 
-        let totalReturn = 0;
+        const limit = Math.min(dataCount, filteredData.length);
+        const selectedData = filteredData.slice(0, limit);
 
-        selectedData.forEach(item => {
+        let totalReturn = 1;
+
+        selectedData.forEach(item => {  // 배열에 대해서 forEach로 순회
             const row = document.createElement("tr");
             const returnRateColor = item.returnRate >= 0 ? "green" : "red";
 
             row.innerHTML = `
-        <td>${item.day}</td>
-        <td>${item.tradingStatus}</td>
-        <td style="color: ${returnRateColor}; font-weight: bold;">${item.returnRate}%</td>
+            <td>${item.day}</td>
+            <td>${item.tradingStatus}</td>
+            <td style="color: ${returnRateColor}; font-weight: bold;">${item.returnRate}%</td>
         `;
             tableBody.appendChild(row);
 
-            totalReturn += item.returnRate;
+            totalReturn *= (1 + item.returnRate / 100);  // 복리 계산
         });
 
-        const avgReturn = selectedData.length > 0 ? (totalReturn).toFixed(2) : 0;
+        const avgReturn = selectedData.length > 0 ? ((totalReturn - 1) * 100).toFixed(2) : 0;
         const avgColor = avgReturn >= 0 ? "green" : "red";
 
         avgReturnEl.innerHTML = `
-    📈 누적 수익률(복리 계산 X) (${limit}거래일):
-    <span style="color: ${avgColor}">${avgReturn}%</span>
-    ${limit < dataCount ? `<span style="color: gray;">(현재 저장된 ${allData.length} 거래일 까지만 표시됨)</span>` : ""}
+        📈 누적 수익률(복리 계산) (${limit}거래일):
+        <span style="color: ${avgColor}">${avgReturn}%</span>
+        ${limit < dataCount ? `<span style="color: gray;">(현재 저장된 ${limit} 거래일 까지만 표시됨)</span>` : ""}
     `;
 
         // 날짜 범위 계산 및 표시
         if (selectedData.length >= 2) {
-            const startDate = new Date(selectedData[selectedData.length - 1].day);
-            const endDate = new Date(selectedData[0].day);
+            const startDate = new Date(selectedData[selectedData.length - 1].day);  // 마지막 데이터의 날짜
+            const endDate = new Date(selectedData[0].day);  // 첫 번째 데이터의 날짜
 
             const diffTime = Math.abs(endDate - startDate);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // 시작일 포함
