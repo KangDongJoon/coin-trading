@@ -81,6 +81,7 @@ public class BackDataService {
                 // DB 및 캐시 저장
                 BackData backData = saveBackData(days, tradingStatus, returnRate);
                 backDataCache.add(backData);
+                log.info("✅{}일 백데이터 추가 완료", LocalDate.now().minusDays(1));
             }
         } catch (IOException e) {
             log.error("API 호출 중 오류 발생: {}", e.getMessage(), e);
@@ -99,6 +100,7 @@ public class BackDataService {
             if (!response.isSuccessful()) {
                 throw new IOException("API 호출 실패: " + response);
             }
+            assert response.body() != null;
             return response.body().string();
         }
     }

@@ -72,27 +72,17 @@ public class RedisService {
         throw new CustomException(ErrorCode.REDIS_NOT_FOUND);
     }
 
-    @Scheduled(cron = "20 0 9 * * ?")
+    @Scheduled(cron = "20 0 9 * * *")
     public void updateTargetPrice() {
-        int maxRetries = 10; // 최대 재시도 횟수
-        int attempt = 0;
         double targetPrice = -1;
 
         try {
             schedulerControlService.setIsProcessing(true);
             log.info("🔴 목표가 갱신 중... checkPrice 멈춤");
-
-            while (targetPrice < 0 && attempt < maxRetries) {
-                try {
-                    targetPrice = upbitCandleService.checkTarget();
-                } catch (Exception e) {
-                    attempt++;
-                    log.error("⚠️ 목표가 가져오기 실패 ({}번째 시도) - {}", attempt, e.getMessage());
-                    if (attempt >= maxRetries) {
-                        log.error("🚨 목표가 갱신 실패: 최대 재시도 횟수 초과");
-                        return; // 재시도 초과 시 안전 종료
-                    }
-                }
+            try {
+                targetPrice = upbitCandleService.checkTarget();
+            } catch (Exception e) {
+                log.error("⚠️ 목표가 가져오기 실패 - {}", e.getMessage());
             }
 
             // 목표가가 정상적으로 설정되지 않았다면 종료
@@ -128,9 +118,9 @@ public class RedisService {
         return Double.parseDouble(targetPrice);
     }
 
-    @Scheduled(cron = "0 10 9 * * ?")
+    @Scheduled(cron = "0 10 9 * * *")
     public void updateDailyBackData() {
-        backDataService.getData("2");
+        backDataService.getData("3");
     }
 
     public void setTodayTradeCheck(String flag) {
