@@ -256,21 +256,23 @@ public class TradingService {
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> orders = (List<Map<String, Object>>) result;
+        log.debug("afterSell orders: {}", orders);
 
         Map<String, Object> buyOrder = orders.get(1);
         double paid_fee_buy = Double.parseDouble((String) buyOrder.get(("paid_fee")));
         double executed_funds_buy = Double.parseDouble((String) buyOrder.get(("executed_funds")));
-        double buyPrice = Math.round(paid_fee_buy + executed_funds_buy);
+        double buyPrice = paid_fee_buy + executed_funds_buy;
 
         Map<String, Object> sellOrder = orders.get(0);
         double paid_fee_sell = Double.parseDouble((String) sellOrder.get("paid_fee"));
+
         double executed_funds_sell = Double.parseDouble((String) sellOrder.get("executed_funds"));
-        double sellPrice = Math.round(executed_funds_sell - paid_fee_sell);
+        double sellPrice = executed_funds_sell - paid_fee_sell;
 
         double ror = (sellPrice - buyPrice) / buyPrice * 100;
         String formatted = String.format("%.1f%%", ror);
 
-        log.info("{}의 매도 수익률: {}%", authUser.getUserId(), formatted);
+        log.info("{}의 매도 수익률: {}", authUser.getUserId(), formatted);
     }
 
     public void asyncTest() throws InterruptedException {
