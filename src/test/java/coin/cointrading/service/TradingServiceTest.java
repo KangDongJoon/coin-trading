@@ -38,7 +38,6 @@ class TradingServiceTest {
     private ConcurrentHashMap<String, TradingStatus> userStatusMap;
     private ConcurrentHashMap<String, AuthUser> userAuthMap;
     private Set<String> runningUser;
-    private ExecutorService executor;
 
     private AuthUser authUser1;
     private AuthUser authUser2;
@@ -56,7 +55,7 @@ class TradingServiceTest {
         userStatusMap = new ConcurrentHashMap<>();
         userAuthMap = new ConcurrentHashMap<>();
         runningUser = ConcurrentHashMap.newKeySet();
-        executor = Executors.newFixedThreadPool(10);
+        ExecutorService executor = Executors.newFixedThreadPool(10);
 
         tradingService = new TradingService(
                 userStatusMap,
@@ -179,23 +178,23 @@ class TradingServiceTest {
     @Test
     void afterSell() {
         // given & when
+
         Map<String, Object> buyOrder = new HashMap<>();
         buyOrder.put("paid_fee", "500");
         buyOrder.put("executed_funds", "1000000");
         double paid_fee_buy = Double.parseDouble((String) buyOrder.get(("paid_fee")));
         double executed_funds_buy = Double.parseDouble((String) buyOrder.get(("executed_funds")));
-        double buyPrice = Math.round(paid_fee_buy + executed_funds_buy);
+        double buyPrice = paid_fee_buy + executed_funds_buy;
 
         Map<String, Object> sellOrder = new HashMap<>();
         sellOrder.put("paid_fee", "550");
         sellOrder.put("executed_funds", "1100000");
         double paid_fee_sell = Double.parseDouble((String) sellOrder.get("paid_fee"));
         double executed_funds_sell = Double.parseDouble((String) sellOrder.get("executed_funds"));
-        double sellPrice = Math.round(executed_funds_sell - paid_fee_sell);
+        double sellPrice = executed_funds_sell - paid_fee_sell;
 
         double ror = (sellPrice - buyPrice) / buyPrice * 100;
         String formatted = String.format("%.1f%%", ror);
-        System.out.println("formatted = " + formatted);
 
         // then
         assertThat(formatted).isEqualTo("9.9%");

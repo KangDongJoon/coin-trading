@@ -256,7 +256,7 @@ public class TradingService {
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> orders = (List<Map<String, Object>>) result;
-        log.debug("afterSell orders: {}", orders);
+        log.info("afterSell orders: {}", orders);
 
         Map<String, Object> buyOrder = orders.get(1);
         double paid_fee_buy = Double.parseDouble((String) buyOrder.get(("paid_fee")));
@@ -265,7 +265,6 @@ public class TradingService {
 
         Map<String, Object> sellOrder = orders.get(0);
         double paid_fee_sell = Double.parseDouble((String) sellOrder.get("paid_fee"));
-
         double executed_funds_sell = Double.parseDouble((String) sellOrder.get("executed_funds"));
         double sellPrice = executed_funds_sell - paid_fee_sell;
 
@@ -277,7 +276,7 @@ public class TradingService {
 
     public void asyncTest() throws InterruptedException {
         processBuy(); // 비동기 매수 실행
-        Thread.sleep(5000);
+        Thread.sleep(60000);
         log.info("쓰레드슬립");
         processSell();
     }
