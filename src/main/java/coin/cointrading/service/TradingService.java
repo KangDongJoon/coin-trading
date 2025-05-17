@@ -261,7 +261,7 @@ public class TradingService {
         Map<String, Object> buyOrder = orders.get(1);
         double paid_fee_buy = Double.parseDouble((String) buyOrder.get(("paid_fee")));
         double executed_funds_buy = Double.parseDouble((String) buyOrder.get(("executed_funds")));
-        double buyPrice = paid_fee_buy + executed_funds_buy;
+        double buyPrice = executed_funds_buy - paid_fee_buy;
 
         Map<String, Object> sellOrder = orders.get(0);
         double paid_fee_sell = Double.parseDouble((String) sellOrder.get("paid_fee"));
