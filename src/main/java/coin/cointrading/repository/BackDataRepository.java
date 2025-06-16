@@ -14,4 +14,6 @@ public interface BackDataRepository extends JpaRepository<BackData, Long> {
 
     @Query("SELECT d FROM BackData d ORDER BY d.day DESC")
     List<BackData> findLatestData(Pageable pageable);
+
+    boolean existsByDay(String day);
 }

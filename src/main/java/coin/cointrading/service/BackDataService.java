@@ -112,7 +112,9 @@ public class BackDataService {
 
     private BackData saveBackData(String day, String tradingStatus, double returnRate) {
         BackData backData = new BackData(day, tradingStatus, returnRate);
-        backDataRepository.save(backData);
+        if (!backDataRepository.existsByDay(day)) {
+            backDataRepository.save(backData);
+        }
         return backData;
     }
 }

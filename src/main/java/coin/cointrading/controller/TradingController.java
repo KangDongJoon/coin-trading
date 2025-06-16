@@ -2,16 +2,14 @@ package coin.cointrading.controller;
 
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.BackData;
+import coin.cointrading.dto.SelectCoin;
 import coin.cointrading.service.TradingService;
 import coin.cointrading.service.UpbitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.List;
@@ -31,9 +29,10 @@ public class TradingController {
     }
 
     @PostMapping("/v1/starts")
-    public String startProgram(@AuthenticationPrincipal AuthUser authUser) {
+    public String startProgram(@AuthenticationPrincipal AuthUser authUser, @RequestBody SelectCoin selectCoin) {
         try {
-            tradingService.startTrading(authUser);
+            String strCoin = selectCoin.getCoin();
+            tradingService.startTrading(authUser, strCoin);
             return authUser.getUserId() + "의 매매 프로그램이 정상적으로 실행되었습니다.";
         } catch (Exception e) {
             return authUser.getUserId() + "의 매매 프로그램 실행 중 오류가 발생했습니다: " + e.getMessage();

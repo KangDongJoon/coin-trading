@@ -6,6 +6,8 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum ErrorCode {
 
+    COIN_NOT_FOUND(HttpStatus.NOT_FOUND, "프로그램에서 거래 불가능한 코인입니다."),
+
     REDIS_NOT_FOUND(HttpStatus.NOT_FOUND, "캐싱된 가격이 없습니다."),
     REDIS_RETRY_FAIL(HttpStatus.NOT_FOUND, "갱신 실패."),
     REDIS_TARGET_PRICE_NOT_FOUND(HttpStatus.NOT_FOUND, "캐싱된 목표가가 없습니다."),

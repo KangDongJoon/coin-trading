@@ -4,9 +4,9 @@ import java.io.IOException;
 
 public interface UpbitCandleService {
 
-    String dayCandle() throws IOException;
+    String dayCandle(String coin) throws IOException;
 
-    Double current() throws IOException;
+    Double current(String coin) throws IOException;
 
-    Double checkTarget() throws IOException;
+    Double checkTarget(String coin) throws IOException;
 }

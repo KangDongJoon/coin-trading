@@ -1,6 +1,7 @@
 package coin.cointrading.service;
 
 import coin.cointrading.domain.AuthUser;
+import coin.cointrading.domain.Coin;
 import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.dto.TradingStatus;
 import coin.cointrading.exception.CustomException;
@@ -38,10 +39,18 @@ public class TradingService {
      *
      * @param authUser 로그인 유저
      */
-    public void startTrading(AuthUser authUser) {
-        initProgram(authUser);
+    public void startTrading( AuthUser authUser, String strCoin) {
+
+        Coin coin = switch (strCoin.toLowerCase()) {
+            case "bitcoin" -> Coin.BTC;
+            case "ethereum" -> Coin.ETH;
+            case "ripple" -> Coin.XRP;
+            default -> throw new CustomException(ErrorCode.COIN_NOT_FOUND);
+        };
+
+        initProgram(authUser, coin);
         runningUser.add(authUser.getUserId());
-        log.info("{}의 프로그램이 실행되었습니다.", authUser.getUserId());
+        log.info("{}의 프로그램이 실행되었습니다, 코인종류 :{}", authUser.getUserId(), coin.getKoreanName());
         log.info("금일 목표가: {}원", redisService.getTargetPrice());
     }
 
@@ -73,9 +82,9 @@ public class TradingService {
      *
      * @param authUser 로그인 유저
      */
-    private void initProgram(AuthUser authUser) {
+    private void initProgram(AuthUser authUser, Coin selectCoin) {
         userAuthMap.putIfAbsent(authUser.getUserId(), authUser);
-        userStatusMap.putIfAbsent(authUser.getUserId(), new TradingStatus());
+        userStatusMap.putIfAbsent(authUser.getUserId(), new TradingStatus(selectCoin));
     }
 
     /**
@@ -101,16 +110,22 @@ public class TradingService {
         schedulerControlService.setIsProcessing(true); // 🔹 실행 시작 표시
 
         try {
-            double currentPrice = redisService.getCurrentPrice();
-            double targetPrice = redisService.getTargetPrice();
+            double currentPrice_BTC = redisService.getCurrentPrice().get("BTC");
+            double currentPrice_ETH = redisService.getCurrentPrice().get("ETH");
+            double currentPrice_XRP = redisService.getCurrentPrice().get("XRP");
+
+            double targetPrice_BTC = redisService.getTargetPrice();
+            double targetPrice_ETH = redisService.getTargetPrice();
+            double targetPrice_XRP = redisService.getTargetPrice();
+            
             String todayTradeCheck = redisService.getTodayTradeCheck();
 
-            if (todayTradeCheck.equals("false") && currentPrice >= targetPrice) {
+            if (todayTradeCheck.equals("false") && currentPrice_BTC >= targetPrice_BTC) {
                 processBuy()
                         .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
             }
 
-            if (todayTradeCheck.equals("true") && currentPrice <= targetPrice * 0.95) {
+            if (todayTradeCheck.equals("true") && currentPrice_BTC <= targetPrice_BTC * 0.95) {
                 processExecute();
             } else {
                 schedulerControlService.setIsProcessing(false);

@@ -9,10 +9,18 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Configuration
 @EnableCaching
 @EnableScheduling
 public class RedisConfig {
+
+    @Bean
+    public Map<String, Double> currentPrice(){
+        return new HashMap<>();
+    }
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
