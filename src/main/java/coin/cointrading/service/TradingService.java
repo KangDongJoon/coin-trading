@@ -39,7 +39,7 @@ public class TradingService {
      *
      * @param authUser 로그인 유저
      */
-    public void startTrading( AuthUser authUser, String strCoin) {
+    public void startTrading(AuthUser authUser, String strCoin) {
 
         Coin coin = switch (strCoin.toLowerCase()) {
             case "bitcoin" -> Coin.BTC;
@@ -117,16 +117,24 @@ public class TradingService {
             double targetPrice_BTC = redisService.getTargetPrice();
             double targetPrice_ETH = redisService.getTargetPrice();
             double targetPrice_XRP = redisService.getTargetPrice();
-            
+
             String todayTradeCheck = redisService.getTodayTradeCheck();
 
-            if (todayTradeCheck.equals("false") && currentPrice_BTC >= targetPrice_BTC) {
-                processBuy()
-                        .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
+            if (todayTradeCheck.equals("false")) {
+                if (currentPrice_BTC >= targetPrice_BTC
+                        || currentPrice_ETH >= targetPrice_ETH
+                        || currentPrice_XRP >= targetPrice_XRP) {
+                    processBuy()
+                            .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
+                }
             }
 
-            if (todayTradeCheck.equals("true") && currentPrice_BTC <= targetPrice_BTC * 0.95) {
-                processExecute();
+            if (todayTradeCheck.equals("true")) {
+                if (currentPrice_BTC <= targetPrice_BTC * 0.95
+                        || currentPrice_ETH <= targetPrice_ETH * 0.95
+                        || currentPrice_XRP <= targetPrice_XRP * 0.95) {
+                    processExecute();
+                }
             } else {
                 schedulerControlService.setIsProcessing(false);
             }
