@@ -33,6 +33,7 @@ public class TradingService {
     private final UpbitService upbitService;
     private final RedisService redisService;
     private final ExecutorService executor;
+    private final Map<String, Double> targetPrice;
 
     /**
      * 프로그램 실행
@@ -51,7 +52,9 @@ public class TradingService {
         initProgram(authUser, coin);
         runningUser.add(authUser.getUserId());
         log.info("{}의 프로그램이 실행되었습니다, 코인종류 :{}", authUser.getUserId(), coin.getKoreanName());
-        log.info("금일 목표가: {}원", redisService.getTargetPrice());
+
+        String formattedPrice_Coin = String.format("%,.0f", targetPrice.get(coin.getMarketCode()));
+        log.info("{} 금일 목표가 : {}원",coin.getKoreanName() ,formattedPrice_Coin);
     }
 
     /**
@@ -110,13 +113,15 @@ public class TradingService {
         schedulerControlService.setIsProcessing(true); // 🔹 실행 시작 표시
 
         try {
-            double currentPrice_BTC = redisService.getCurrentPrice().get("BTC");
-            double currentPrice_ETH = redisService.getCurrentPrice().get("ETH");
-            double currentPrice_XRP = redisService.getCurrentPrice().get("XRP");
+            Map<String, Double> currentMap = redisService.getCurrentPrice();
 
-            double targetPrice_BTC = redisService.getTargetPrice();
-            double targetPrice_ETH = redisService.getTargetPrice();
-            double targetPrice_XRP = redisService.getTargetPrice();
+            double currentPrice_BTC = currentMap.get("BTC");
+            double currentPrice_ETH = currentMap.get("ETH");
+            double currentPrice_XRP = currentMap.get("XRP");
+
+            double targetPrice_BTC = targetPrice.get("BTC");
+            double targetPrice_ETH = targetPrice.get("ETH");
+            double targetPrice_XRP = targetPrice.get("XRP");
 
             String todayTradeCheck = redisService.getTodayTradeCheck();
 
@@ -139,10 +144,9 @@ public class TradingService {
                 schedulerControlService.setIsProcessing(false);
             }
         } catch (Exception e) {
-            log.error("🚨 checkPrice() 실행 중 오류 발생: {}, 스케쥴링 중지", e.getMessage());
+            log.error("🚨 checkPrice() 실행 중 오류 발생: {} 스케쥴링 중지", e.getMessage());
         }
     }
-
 
     /**
      * 조건에 부합하면 매수 진행

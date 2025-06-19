@@ -28,18 +28,14 @@ public class RedisService {
     private final BackDataService backDataService;
     private final SchedulerControlService schedulerControlService;
     private final Map<String, Double> currentPrice;
+    private final Map<String, Double> targetPrice;
 
     @PostConstruct
     public void initialize() throws IOException {
         updatePriceCache();
-        double targetPrice_BTC = upbitCandleService.checkTarget("BTC");
-        redisTemplate.opsForValue().set("TARGET_PRICE_BTC", String.valueOf(targetPrice_BTC), Duration.ofDays(2));
-        double targetPrice_ETH = upbitCandleService.checkTarget("ETH");
-        redisTemplate.opsForValue().set("TARGET_PRICE_ETH", String.valueOf(targetPrice_ETH), Duration.ofDays(2));
-        double targetPrice_XRP = upbitCandleService.checkTarget("XRP");
-        redisTemplate.opsForValue().set("TARGET_PRICE_XRP", String.valueOf(targetPrice_XRP), Duration.ofDays(2));
+        updateTargetPrice();
 
-        targetPrcieLog(targetPrice_BTC, targetPrice_ETH, targetPrice_XRP, "----- 목표가 갱신 -----", "--------------------");
+        targetPriceLog(targetPrice.get("BTC"), targetPrice.get("ETH"), targetPrice.get("XRP"), "----- 목표가 갱신 -----", "--------------------");
         setTodayTradeCheck("false");
     }
 
@@ -104,6 +100,10 @@ public class RedisService {
                 targetPrice_BTC = upbitCandleService.checkTarget("BTC");
                 targetPrice_ETH = upbitCandleService.checkTarget("ETH");
                 targetPrice_XRP = upbitCandleService.checkTarget("XRP");
+
+                targetPrice.put("BTC", targetPrice_BTC);
+                targetPrice.put("ETH", targetPrice_ETH);
+                targetPrice.put("XRP", targetPrice_XRP);
             } catch (Exception e) {
                 log.error("⚠️ 목표가 가져오기 실패 - {}", e.getMessage());
             }
@@ -118,7 +118,7 @@ public class RedisService {
             redisTemplate.opsForValue().set("TARGET_PRICE_XRP", String.valueOf(targetPrice_XRP), Duration.ofDays(2));
             setTodayTradeCheck("false");
 
-            targetPrcieLog(targetPrice_BTC, targetPrice_ETH, targetPrice_XRP, "✅ 목표가 갱신 완료 -----", "----------------------");
+            targetPriceLog(targetPrice_BTC, targetPrice_ETH, targetPrice_XRP, "✅ 목표가 갱신 완료 -----", "----------------------");
             log.info("✅ 매수 여부 초기화");
 
             for (String userId : userStatusMap.keySet()) {
@@ -136,12 +136,17 @@ public class RedisService {
     }
 
 
-    public double getTargetPrice() {
-        String targetPrice = redisTemplate.opsForValue().get("TARGET_PRICE");
-        if (targetPrice == null) {
+    public Map<String, Double> getTargetPrice() {
+        Double targetPrice_BTC = targetPrice.get("BTC");
+        Double targetPrice_ETH = targetPrice.get("ETH");
+        Double targetPrice_XRP = targetPrice.get("XRP");
+        if (targetPrice_BTC == null
+                || targetPrice_ETH == null
+                || targetPrice_XRP == null) {
             throw new CustomException(ErrorCode.REDIS_TARGET_PRICE_NOT_FOUND);
         }
-        return Double.parseDouble(targetPrice);
+
+        return targetPrice;
     }
 
     @Scheduled(cron = "0 10 9 * * *")
@@ -157,7 +162,7 @@ public class RedisService {
         return redisTemplate.opsForValue().get("TODAY_TRADE");
     }
 
-    private static void targetPrcieLog(double targetPrice_BTC, double targetPrice_ETH, double targetPrice_XRP, String s, String s1) {
+    private static void targetPriceLog(double targetPrice_BTC, double targetPrice_ETH, double targetPrice_XRP, String s, String s1) {
         String formattedPrice_BTC = String.format("%,.0f", targetPrice_BTC);
         String formattedPrice_ETH = String.format("%,.0f", targetPrice_ETH);
         String formattedPrice_XRP = String.format("%,.0f", targetPrice_XRP);

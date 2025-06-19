@@ -23,6 +23,11 @@ public class RedisConfig {
     }
 
     @Bean
+    public Map<String, Double> targetPrice(){
+        return new HashMap<>();
+    }
+
+    @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
