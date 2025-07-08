@@ -92,7 +92,7 @@ public class TradingService {
     public void programStatus() {
         for (String userId : runningUser) {
             TradingStatus status = userStatusMap.get(userId);
-            log.info("---{}의 프로그램 동작중---", userId);
+            log.info("====== {}의 프로그램 동작중 ======", userId);
             log.info("동작상태: {}", status.getOpMode());
             log.info("코인종류: {}", status.getSelectCoin());
             log.info("매수여부: {}", status.getHold().get());
