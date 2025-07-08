@@ -4,7 +4,6 @@ import coin.cointrading.domain.Coin;
 import coin.cointrading.dto.TradingStatus;
 import coin.cointrading.exception.CustomException;
 import coin.cointrading.exception.ErrorCode;
-import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,12 +35,12 @@ public class RedisService {
     @Getter
     private final Map<Coin, String> todayTradeCheckMap;
 
-    @PostConstruct
+
+    @Scheduled(initialDelay = 3000, fixedDelay = Long.MAX_VALUE)
     public void initialize() throws IOException {
         updatePriceCache();
         updateTargetPrice();
         targetPriceLog();
-        setTodayTradeCheck("false");
     }
 
     // Refresh Token 저장
@@ -104,9 +103,11 @@ public class RedisService {
                 log.error("⚠️ 목표가 가져오기 실패 - {}", e.getMessage());
                 throw new CustomException(ErrorCode.REDIS_TARGET_PRICE_NOT_FOUND);
             }
-            setTodayTradeCheck("false");
 
-            targetPriceLog();
+            // 금일 거래 여부 초기화
+            for (Coin coin : Coin.values()) {
+                setTodayTradeCheck(coin, "false");
+            }
             log.info("✅ 매수 여부 초기화");
 
             for (String userId : userStatusMap.keySet()) {
@@ -128,21 +129,18 @@ public class RedisService {
         backDataService.getData("3");
     }
 
-    public void setTodayTradeCheck(String flag) {
-        for (Coin coin : Coin.values()) {
-            String todayTradeString = "TODAY_TRADE_" + coin;
-            redisTemplate.opsForValue().set(todayTradeString, flag, Duration.ofDays(2));
-            todayTradeCheckMap.put(coin, flag);
-        }
+    public void setTodayTradeCheck(Coin buyCoin, String flag) {
+        String todayTradeString = "TODAY_TRADE_" + buyCoin;
+        redisTemplate.opsForValue().set(todayTradeString, flag, Duration.ofDays(2));
+        todayTradeCheckMap.put(buyCoin, flag);
     }
 
-
     private void targetPriceLog() {
-        log.info("----- 목표가 갱신 -----");
+        log.info("====== 목표가 갱신 ======");
         for (Coin coin : Coin.values()) {
             String formattedPrice = String.format("%,.0f", targetPriceMap.get(coin));
             log.info("{}: {}", coin.getKoreanName(), formattedPrice);
         }
-        log.info("--------------------");
+        log.info("======================");
     }
 }

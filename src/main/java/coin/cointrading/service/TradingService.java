@@ -40,19 +40,18 @@ public class TradingService {
      * @param authUser 로그인 유저
      */
     public void startTrading(AuthUser authUser, String strCoin) {
-
         Coin coin = Coin.valueOf(strCoin);
 
         initProgram(authUser, coin);
         runningUser.add(authUser.getUserId());
-        log.info("{}의 프로그램이 실행되었습니다, 코인종류 :{}", authUser.getUserId(), coin.getKoreanName());
-
+        log.info("==== {}의 프로그램이 실행되었습니다 =====", authUser.getUserId());
+        log.info("선택 코인: {}", coin.getKoreanName());
         String formattedPrice_Coin = String.format("%,.0f", redisService.getTargetPriceMap().get(coin));
-        log.info("{} 금일 목표가 : {}원", coin.getKoreanName(), formattedPrice_Coin);
+        log.info("금일 목표가 : {}원", formattedPrice_Coin);
     }
 
     /**
-     * 프로그램 종료, 서버에서 상태 및 Auth정보도 함께 삭제
+     * 프로그램 종료, 서버에서 상태 및 Auth 정보도 함께 삭제
      *
      * @param authUser 로그인 유저
      */
@@ -85,7 +84,7 @@ public class TradingService {
     }
 
     /**
-     * 1시간마다 유저 별 프로그램 동작상태 확인
+     * 1시간마다 유저들의 프로그램 동작상태 확인
      */
     @Scheduled(cron = "0 0 * * * ?")
     public void programStatus() {
@@ -101,7 +100,7 @@ public class TradingService {
     /**
      * 1초마다 코인 시세 확인 후 매수, 손절 진행
      */
-    @Scheduled(fixedDelay = 1000)
+    @Scheduled(initialDelay = 10000, fixedDelay = 1000)
     public void checkPrice() {
         if (schedulerControlService.getIsProcessing()) {
             return;
@@ -118,7 +117,7 @@ public class TradingService {
                 // 조건 매수
                 if (todayTradeCheck.equals("false")) {
                     if (currentPrice >= targetPrice) {
-                        processBuy()
+                        processBuy(coin)
                                 .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
                     }
                 }
@@ -138,13 +137,16 @@ public class TradingService {
     /**
      * 조건에 부합하면 매수 진행
      */
-    private CompletableFuture<Void> processBuy() {
-        log.info("----------매수 로직 실행 중---------- ");
+    private CompletableFuture<Void> processBuy(Coin buyCoin) {
+        log.info("====== 매수 로직 실행 중 ======");
+        log.info("매수 종목: {}", buyCoin);
 
-        List<CompletableFuture<Void>> futures = runningUser.stream()
+        List<CompletableFuture<Void>> futures = runningUser.stream() // 실행 중인 유저를 돌면서 매수 진행
                 .map(userId -> {
                     TradingStatus status = userStatusMap.get(userId);
-                    if (status.getOpMode().get() && !status.getStopLossExecuted().get() && !status.getHold().get()) {
+                    if (status.getOpMode().get() // 1일 후 거래
+                            && !status.getStopLossExecuted().get() // 금일 손절 로직 실행 여부
+                            && !status.getHold().get()) { // 매수 여부
                         AuthUser authUser = userAuthMap.get(userId);
                         return executeAsyncBuy(authUser, status);
                     }
@@ -153,13 +155,12 @@ public class TradingService {
                 .filter(Objects::nonNull)
                 .toList();
 
-        redisService.setTodayTradeCheck("true");
+        redisService.setTodayTradeCheck(buyCoin, "true");
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
     }
 
     /**
      * 비동기 처리로 Upbit 매수 API 요청 및 상태 변경
-     *
      * @param authUser 로그인 유저
      * @param status   유저 거래 상태
      */
@@ -179,9 +180,11 @@ public class TradingService {
      */
     @Scheduled(cron = "50 59 8 * * ?")
     public void processSell() {
-        for (String userId : runningUser) {
+        for (String userId : runningUser) { // 실행중인 유저 확인
             TradingStatus status = userStatusMap.get(userId);
-            if (status.getOpMode().get() && !status.getStopLossExecuted().get() && status.getHold().get()) {
+            if (status.getOpMode().get() // 동작 상태 확인
+                    && !status.getStopLossExecuted().get() // 손절 여부 확인
+                    && status.getHold().get()) { // 매수 여부 확인
                 AuthUser authUser = userAuthMap.get(userId);
                 executeAsyncSell(authUser, status);
             }
@@ -192,7 +195,7 @@ public class TradingService {
      * 조건에 부합하면 손전 진행
      */
     private void processExecute() {
-        log.info("----------손절 로직 실행 중---------- ");
+        log.info("====== 손절 로직 실행 중 ======");
 
         List<CompletableFuture<Void>> futures = runningUser.stream()
                 .map(userId -> {
@@ -213,12 +216,11 @@ public class TradingService {
 
     /**
      * 비동기 처리로 Upbit 매도 API 요청 및 상태 변경
-     *
      * @param authUser 로그인 유저
      * @param status   거래 상태
      */
     private CompletableFuture<Void> executeAsyncSell(AuthUser authUser, TradingStatus status) {
-        log.info("----------매도 로직 실행 중---------- ");
+        log.info("====== 매도 로직 실행 중 ======");
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
@@ -244,7 +246,6 @@ public class TradingService {
 
     /**
      * 매수 처리 이후 상태 변경 및 매수금액 확인
-     *
      * @param result   거래 결과
      * @param status   거래 상태
      * @param authUser 로그인 유저
@@ -254,12 +255,13 @@ public class TradingService {
         status.getHold().set(true);  // 매수 완료 상태로 변경
         double locked = Math.round(Double.parseDouble(response.getLocked()));
         status.getBuyPrice().set(locked);  // 매수 금액 설정
-        log.info("{}의 매수 금액: {}원", authUser.getUserId(), locked);
+
+        String formatted_locked = String.format("%,.0f", locked);
+        log.info("{}의 매수 금액: {}원", authUser.getUserId(), formatted_locked);
     }
 
     /**
      * 매도 처리 후 상태 변경 및 수익률 확인
-     *
      * @param result   거래 결과
      * @param status   거래 상태
      * @param authUser 로그인 유저
@@ -283,13 +285,13 @@ public class TradingService {
         double sellPrice = executed_funds_sell - paid_fee_sell;
 
         double ror = (sellPrice - buyPrice) / buyPrice * 100;
-        String formatted = String.format("%.1f%%", ror);
+        String formatted_ror = String.format("%.1f%%", ror);
 
-        log.info("{}의 매도 수익률: {}", authUser.getUserId(), formatted);
+        log.info("{}의 매도 수익률: {}", authUser.getUserId(), formatted_ror);
     }
 
-    public void asyncTest() throws InterruptedException {
-        processBuy(); // 비동기 매수 실행
+    public void asyncTest(AuthUser authUser) throws InterruptedException {
+        processBuy(userStatusMap.get(authUser.getUserId()).getSelectCoin()); // 비동기 매수 실행
         Thread.sleep(6000);
         log.info("쓰레드슬립");
         processSell();

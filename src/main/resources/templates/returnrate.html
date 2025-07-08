@@ -37,6 +37,16 @@
 <!-- 평균 수익률 표시 -->
 <div id="average-return" style="margin-top: 10px; font-weight: bold;"></div>
 
+<!-- 코인 선택 드롭다운 -->
+<div style="margin-bottom: 10px;">
+    <label for="coin-select">코인 선택:</label>
+    <select id="coin-select" onchange="handleSelectCoinChange(this)">
+        <option value="BTC">비트코인 (BTC)</option>
+        <option value="ETH">이더리움 (ETH)</option>
+        <option value="XRP">리플 (XRP)</option>
+    </select>
+</div>
+
 <!-- 드롭다운 메뉴 -->
 <div style="margin-bottom: 10px;">
     <label for="data-count-select">표시할 데이터 수:</label>
@@ -64,29 +74,37 @@
     </tr>
     </tbody>
 </table>
+
 <script>
     const API_BASE_URL = window.location.origin.includes("localhost")
         ? "http://localhost:8080"
         : "http://43.201.244.141:8080";
 
-    const API_URL = `${API_BASE_URL}/auth/get-back-data`;
+    const API_URL = `${API_BASE_URL}/auth/backdatas`;
     let allData = [];
     let dataCount = 7; // 기본값
+    let selectCoin = "BTC";
 
     // 드롭다운 변경 시 호출
     function handleSelectChange(selectElement) {
         dataCount = parseInt(selectElement.value);
-        renderTable();
+        fetchData();
+    }
+
+    function handleSelectCoinChange(selectElement) {
+        selectCoin = selectElement.value;
+        fetchData()
     }
 
     async function fetchData() {
         const tableBody = document.getElementById("table-body");
         tableBody.innerHTML = `<tr id="loading-row"><td colspan="3">📊 데이터를 불러오는 중...</td></tr>`;
 
+        const url = `${API_URL}?coin=${selectCoin}&days=${dataCount}`;
+
         try {
-            const response = await fetch(API_URL);
+            const response = await fetch(url);
             if (!response.ok) {
-                console.error(`HTTP error! Status: ${response.status}`);
                 tableBody.innerHTML = `<tr><td colspan="3" class="error-message">❌ 데이터 로드 실패 (Status: ${response.status})</td></tr>`;
                 return;
             }
@@ -98,6 +116,8 @@
         }
     }
 
+
+
     function renderTable() {
         const tableBody = document.getElementById("table-body");
         const avgReturnEl = document.getElementById("average-return");
@@ -105,16 +125,17 @@
 
         tableBody.innerHTML = "";
 
+        // 코인 필터 제거 (fetchData가 이미 필터된 데이터만 가져옴)
         const filteredData = allData
             .filter(item => item.tradingStatus === 'O')
-            .sort((a, b) => new Date(b.day) - new Date(a.day));  // 날짜 내림차순 정렬
+            .sort((a, b) => new Date(b.day) - new Date(a.day));
 
         const limit = Math.min(dataCount, filteredData.length);
         const selectedData = filteredData.slice(0, limit);
 
         let totalReturn = 1;
 
-        selectedData.forEach(item => {  // 배열에 대해서 forEach로 순회
+        selectedData.forEach(item => {
             const row = document.createElement("tr");
             const returnRateColor = item.returnRate >= 0 ? "green" : "red";
 
@@ -125,7 +146,7 @@
         `;
             tableBody.appendChild(row);
 
-            totalReturn *= (1 + item.returnRate / 100);  // 복리 계산
+            totalReturn *= (1 + item.returnRate / 100);
         });
 
         const avgReturn = selectedData.length > 0 ? ((totalReturn - 1) * 100).toFixed(2) : 0;
@@ -137,14 +158,11 @@
         ${limit < dataCount ? `<span style="color: gray;">(현재 저장된 ${limit} 거래일 까지만 표시됨)</span>` : ""}
     `;
 
-        // 날짜 범위 계산 및 표시
         if (selectedData.length >= 2) {
-            const startDate = new Date(selectedData[selectedData.length - 1].day);  // 마지막 데이터의 날짜
-            const endDate = new Date(selectedData[0].day);  // 첫 번째 데이터의 날짜
-
+            const startDate = new Date(selectedData[selectedData.length - 1].day);
+            const endDate = new Date(selectedData[0].day);
             const diffTime = Math.abs(endDate - startDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // 시작일 포함
-
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
             dateRangeEl.innerHTML = `📅 기간: ${selectedData[selectedData.length - 1].day} ~ ${selectedData[0].day} (${diffDays}일)`;
         } else {
             dateRangeEl.innerHTML = "";
