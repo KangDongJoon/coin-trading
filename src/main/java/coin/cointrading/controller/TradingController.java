@@ -66,9 +66,10 @@ public class TradingController {
      */
     @GetMapping("/v1/status")
     public ResponseEntity<Map<String, String>> checkStatus(@AuthenticationPrincipal AuthUser authUser) {
-        String status = tradingService.checkStatus(authUser); // 사용자 상태 반환
+        // 사용자 상태 반환
         Map<String, String> response = new HashMap<>();
-        response.put("isRunning", status);
+        response.put("isRunning", tradingService.checkStatus(authUser));
+        response.put("selectedCoin", tradingService.getUserStatusMap().get(authUser.getUserId()).getSelectCoin().name());
         return ResponseEntity.ok(response);
     }
 

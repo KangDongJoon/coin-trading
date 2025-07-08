@@ -6,6 +6,7 @@ import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.dto.TradingStatus;
 import coin.cointrading.exception.CustomException;
 import coin.cointrading.exception.ErrorCode;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 @Transactional(readOnly = true)
 public class TradingService {
 
+    @Getter
     private final ConcurrentHashMap<String, TradingStatus> userStatusMap; // 유저 거래상태 저장 컬렉션
     private final ConcurrentHashMap<String, AuthUser> userAuthMap; // 유저 Auth정보 저장 컬렉션
     private final Set<String> runningUser; // 현재 프로그램을 실행중인 유저를 저장하는 컬렉션
