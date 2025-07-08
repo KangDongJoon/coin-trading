@@ -82,7 +82,9 @@ public class BackDataService {
 
                     // DB 및 캐시 저장
                     BackData backData = saveBackData(days, coin, tradingStatus, returnRate);
-                    backDataMap.get(coin).add(backData);
+                    if(backDataMap.containsKey(coin)){
+                        backDataMap.get(coin).add(backData);
+                    }
                     log.info("✅{}일 백데이터 추가 완료", days);
                 }
             } catch (IOException e) {
