@@ -1,5 +1,6 @@
 package coin.cointrading.config;
 
+import coin.cointrading.domain.Coin;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,12 +19,17 @@ import java.util.Map;
 public class RedisConfig {
 
     @Bean
-    public Map<String, Double> currentPrice(){
+    public Map<Coin, Double> currentPriceMap(){
         return new HashMap<>();
     }
 
     @Bean
-    public Map<String, Double> targetPrice(){
+    public Map<Coin, Double> targetPriceMap(){
+        return new HashMap<>();
+    }
+
+    @Bean
+    public Map<Coin, String> todayTradeCheckMap() {
         return new HashMap<>();
     }
 

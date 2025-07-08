@@ -1,12 +1,14 @@
 package coin.cointrading.service;
 
+import coin.cointrading.domain.Coin;
+
 import java.io.IOException;
 
 public interface UpbitCandleService {
 
-    String dayCandle(String coin) throws IOException;
+    String dayCandle(Coin coin) throws IOException;
 
-    Double current(String coin) throws IOException;
+    Double current(Coin coin) throws IOException;
 
-    Double checkTarget(String coin) throws IOException;
+    Double checkTarget(Coin coin) throws IOException;
 }

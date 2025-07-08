@@ -1,5 +1,6 @@
 package coin.cointrading.service.impl;
 
+import coin.cointrading.domain.Coin;
 import coin.cointrading.dto.SimpleCandleDTO;
 import coin.cointrading.dto.UpbitCandle;
 import coin.cointrading.service.UpbitCandleService;
@@ -25,7 +26,7 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
     private final OkHttpClient okHttpClient;
 
     @Override
-    public String dayCandle(String coin) throws IOException {
+    public String dayCandle(Coin coin) throws IOException {
         Request request = new Request.Builder()
                 .url("https://api.upbit.com/v1/candles/days?market=KRW-" + coin + "&count=2")
                 .get()
@@ -48,7 +49,7 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
     }
 
     @Override
-    public Double current(String coin) throws IOException {
+    public Double current(Coin coin) throws IOException {
         String serverUrl = "https://api.upbit.com";
         Request request = new Request.Builder()
                 .url(serverUrl + "/v1/ticker?markets=KRW-" + coin)
@@ -71,7 +72,7 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
     }
 
     @Override
-    public Double checkTarget(String coin) throws IOException {
+    public Double checkTarget(Coin coin) throws IOException {
         String candle = dayCandle(coin);
         ObjectMapper objectMapper = new ObjectMapper();
 

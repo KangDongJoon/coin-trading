@@ -4,9 +4,9 @@ import lombok.Getter;
 
 @Getter
 public enum Coin {
-    BTC("비트코인", "BTC"),
-    ETH("이더리움", "ETH"),
-    XRP("리플", "XRP");
+    BTC("비트코인", "KRW-BTC"),
+    ETH("이더리움", "KRW-ETH"),
+    XRP("리플", "KRW-XRP");
 
     private final String koreanName;
     private final String marketCode;

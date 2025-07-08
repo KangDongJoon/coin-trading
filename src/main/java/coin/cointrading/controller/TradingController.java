@@ -63,16 +63,16 @@ public class TradingController {
         return null;
     }
 
-    @PostMapping("/v1/orders/sell")
-    public ResponseEntity<Object> order(@AuthenticationPrincipal AuthUser authUser) throws Exception {
-        String decision = "sell";
-        return ResponseEntity.ok(upbitService.orderCoins(decision, authUser));
-    }
+//    @PostMapping("/v1/orders/sell")
+//    public ResponseEntity<Object> order(@AuthenticationPrincipal AuthUser authUser) throws Exception {
+//        String decision = "sell";
+//        return ResponseEntity.ok(upbitService.orderCoins(decision, authUser));
+//    }
 
-    @GetMapping("/v1/orders/close")
-    public ResponseEntity<Object> getOrders(@AuthenticationPrincipal AuthUser authUser, @RequestParam int count) {
-        return ResponseEntity.ok(upbitService.getOrders(authUser, count));
-    }
+//    @GetMapping("/v1/orders/close")
+//    public ResponseEntity<Object> getOrders(@AuthenticationPrincipal AuthUser authUser, @RequestParam int count) {
+//        return ResponseEntity.ok(upbitService.getOrders(authUser, count));
+//    }
 
     @PostMapping("/test/async")
     public void testAsync() throws InterruptedException {

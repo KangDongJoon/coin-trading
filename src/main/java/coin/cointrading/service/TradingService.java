@@ -33,7 +33,6 @@ public class TradingService {
     private final UpbitService upbitService;
     private final RedisService redisService;
     private final ExecutorService executor;
-    private final Map<String, Double> targetPrice;
 
     /**
      * 프로그램 실행
@@ -42,19 +41,14 @@ public class TradingService {
      */
     public void startTrading(AuthUser authUser, String strCoin) {
 
-        Coin coin = switch (strCoin.toLowerCase()) {
-            case "bitcoin" -> Coin.BTC;
-            case "ethereum" -> Coin.ETH;
-            case "ripple" -> Coin.XRP;
-            default -> throw new CustomException(ErrorCode.COIN_NOT_FOUND);
-        };
+        Coin coin = Coin.valueOf(strCoin);
 
         initProgram(authUser, coin);
         runningUser.add(authUser.getUserId());
         log.info("{}의 프로그램이 실행되었습니다, 코인종류 :{}", authUser.getUserId(), coin.getKoreanName());
 
-        String formattedPrice_Coin = String.format("%,.0f", targetPrice.get(coin.getMarketCode()));
-        log.info("{} 금일 목표가 : {}원",coin.getKoreanName() ,formattedPrice_Coin);
+        String formattedPrice_Coin = String.format("%,.0f", redisService.getTargetPriceMap().get(coin));
+        log.info("{} 금일 목표가 : {}원", coin.getKoreanName(), formattedPrice_Coin);
     }
 
     /**
@@ -97,7 +91,10 @@ public class TradingService {
     public void programStatus() {
         for (String userId : runningUser) {
             TradingStatus status = userStatusMap.get(userId);
-            log.info("---{}의 프로그램 동작중--- op_mode: {}, hold: {}", userId, status.getOpMode().get(), status.getHold().get());
+            log.info("---{}의 프로그램 동작중---", userId);
+            log.info("동작상태: {}", status.getOpMode());
+            log.info("코인종류: {}", status.getSelectCoin());
+            log.info("매수여부: {}", status.getHold().get());
         }
     }
 
@@ -113,35 +110,25 @@ public class TradingService {
         schedulerControlService.setIsProcessing(true); // 🔹 실행 시작 표시
 
         try {
-            Map<String, Double> currentMap = redisService.getCurrentPrice();
+            for (Coin coin : Coin.values()) {
+                Double currentPrice = redisService.getCurrentPrice().get(coin);
+                Double targetPrice = redisService.getTargetPriceMap().get(coin);
+                String todayTradeCheck = redisService.getTodayTradeCheckMap().get(coin);
 
-            double currentPrice_BTC = currentMap.get("BTC");
-            double currentPrice_ETH = currentMap.get("ETH");
-            double currentPrice_XRP = currentMap.get("XRP");
-
-            double targetPrice_BTC = targetPrice.get("BTC");
-            double targetPrice_ETH = targetPrice.get("ETH");
-            double targetPrice_XRP = targetPrice.get("XRP");
-
-            String todayTradeCheck = redisService.getTodayTradeCheck();
-
-            if (todayTradeCheck.equals("false")) {
-                if (currentPrice_BTC >= targetPrice_BTC
-                        || currentPrice_ETH >= targetPrice_ETH
-                        || currentPrice_XRP >= targetPrice_XRP) {
-                    processBuy()
-                            .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
+                // 조건 매수
+                if (todayTradeCheck.equals("false")) {
+                    if (currentPrice >= targetPrice) {
+                        processBuy()
+                                .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
+                    }
                 }
-            }
 
-            if (todayTradeCheck.equals("true")) {
-                if (currentPrice_BTC <= targetPrice_BTC * 0.95
-                        || currentPrice_ETH <= targetPrice_ETH * 0.95
-                        || currentPrice_XRP <= targetPrice_XRP * 0.95) {
+                // 손절
+                if (todayTradeCheck.equals("true") && currentPrice <= targetPrice * 0.95) {
                     processExecute();
+                } else {
+                    schedulerControlService.setIsProcessing(false);
                 }
-            } else {
-                schedulerControlService.setIsProcessing(false);
             }
         } catch (Exception e) {
             log.error("🚨 checkPrice() 실행 중 오류 발생: {} 스케쥴링 중지", e.getMessage());
@@ -179,7 +166,7 @@ public class TradingService {
     private CompletableFuture<Void> executeAsyncBuy(AuthUser authUser, TradingStatus status) {
         return CompletableFuture.supplyAsync(() -> {  // 🔹 'return' 추가
             try {
-                return upbitService.orderCoins("buy", authUser);
+                return upbitService.orderCoins("buy", authUser, status.getSelectCoin());
             } catch (Exception e) {
                 log.error(e.getMessage());
                 throw new CustomException(ErrorCode.UPBIT_ORDER_FAIL);
@@ -235,7 +222,7 @@ public class TradingService {
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
-                        return upbitService.orderCoins("sell", authUser);
+                        return upbitService.orderCoins("sell", authUser, status.getSelectCoin());
                     } catch (Exception e) {
                         log.error(e.getMessage());
                         throw new CustomException(ErrorCode.UPBIT_ORDER_FAIL);
@@ -245,7 +232,7 @@ public class TradingService {
                 CompletableFuture.supplyAsync(
                         () -> {
                             try {
-                                return upbitService.getOrders(authUser, 2);
+                                return upbitService.getOrders(authUser, 2, status.getSelectCoin());
                             } catch (Exception e) {
                                 log.error(e.getMessage());
                                 throw new CustomException(ErrorCode.UPBIT_ORDER_LIST_READ_FAIL);
@@ -303,7 +290,7 @@ public class TradingService {
 
     public void asyncTest() throws InterruptedException {
         processBuy(); // 비동기 매수 실행
-        Thread.sleep(60000);
+        Thread.sleep(6000);
         log.info("쓰레드슬립");
         processSell();
     }

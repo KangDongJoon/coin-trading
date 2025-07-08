@@ -1,6 +1,7 @@
 package coin.cointrading.service.impl;
 
 import coin.cointrading.domain.AuthUser;
+import coin.cointrading.domain.Coin;
 import coin.cointrading.service.UpbitService;
 import coin.cointrading.util.JwtTokenProvider;
 import com.google.gson.Gson;
@@ -46,7 +47,7 @@ public class UpbitServicePassThroughImpl implements UpbitService {
     }
 
     @Override
-    public Object orderCoins(String decision, AuthUser authUser) throws Exception {
+    public Object orderCoins(String decision, AuthUser authUser, Coin selectCoin) throws Exception {
         List<Map<String, Object>> account = (List<Map<String, Object>>) getAccount(authUser);
 
         Map<String, Object> KRW = new HashMap<>();
@@ -95,7 +96,7 @@ public class UpbitServicePassThroughImpl implements UpbitService {
     }
 
     @Override
-    public Object getOrders(AuthUser authUser, int count) {
+    public Object getOrders(AuthUser authUser, int count, Coin selectCoin) {
         return null;
     }
 }
