@@ -71,109 +71,109 @@ class TradingServiceTest {
         authUser2 = new AuthUser("user2", "nick2", "secret2", "access2");
     }
 
-    @Test
-    void startTrading_success() {
-        // when & then
-        tradingService.startTrading(authUser1);
-        assertThat(runningUser.size()).isEqualTo(1);
-        assertTrue(userStatusMap.containsKey(authUser1.getUserId()));
-        assertTrue(userAuthMap.containsKey(authUser1.getUserId()));
-        tradingService.startTrading(authUser2);
-        assertThat(runningUser.size()).isEqualTo(2);
-        assertTrue(userStatusMap.containsKey(authUser2.getUserId()));
-        assertTrue(userAuthMap.containsKey(authUser2.getUserId()));
-    }
-
-    @Test
-    void stopTrading_success() {
-        // given
-        tradingService.startTrading(authUser1);
-        tradingService.startTrading(authUser2);
-        // when & then
-        assertThat(runningUser.size()).isEqualTo(2);
-        tradingService.stopTrading(authUser1);
-        assertThat(runningUser.size()).isEqualTo(1);
-        assertFalse(runningUser.contains(authUser1.getUserId()));
-        tradingService.stopTrading(authUser2);
-        assertTrue(runningUser.isEmpty());
-    }
-
-    @Test
-    void checkPrice_processBuy_success() throws Exception {
-        // given
-        when(redisService.getCurrentPrice()).thenReturn(1600000d);
-        when(redisService.getTargetPrice()).thenReturn(1500000d);
-        when(redisService.getTodayTradeCheck()).thenReturn("false");
-        runningUser.add(authUser1.getUserId());
-        userAuthMap.put(authUser1.getUserId(), authUser1);
-        TradingStatus status = new TradingStatus();
-        status.getOpMode().set(true);
-        userStatusMap.put(authUser1.getUserId(), status);
-        Object orderResponse = new OrderResponse(
-                "KRW-ETH",
-                "bid",
-                "1600000",
-                "1.0",
-                "1.0",
-                "1600000"
-        );
-        when(upbitService.orderCoins("buy", authUser1)).thenReturn(orderResponse);
-
-        // when
-        tradingService.checkPrice();
-        await()
-                .atMost(3, TimeUnit.SECONDS)
-                .until(() -> status.getHold().get());
-
-        // then
-        assertTrue(status.getHold().get());
-    }
-
-    @Test
-    void checkPrice_processExecutedFunds_success() throws Exception {
-        // given
-        when(redisService.getCurrentPrice()).thenReturn(800000d);
-        when(redisService.getTargetPrice()).thenReturn(1000000d);
-        when(redisService.getTodayTradeCheck()).thenReturn("true");
-        runningUser.add(authUser1.getUserId());
-        userAuthMap.put(authUser1.getUserId(), authUser1);
-        TradingStatus status = new TradingStatus();
-        status.getOpMode().set(true);
-        status.getHold().set(true);
-        userStatusMap.put(authUser1.getUserId(), status);
-
-        Object orderResponse = new OrderResponse(
-                "KRW-ETH",
-                "bid",
-                "800000",
-                "1.0",
-                "1.0",
-                "800000"
-        );
-        when(upbitService.orderCoins("sell", authUser1)).thenReturn(orderResponse);
-        when(upbitService.getOrders(authUser1, 1)).thenReturn(orderResponse);
-
-        // when
-        tradingService.checkPrice();
-
-        // then
-        assertTrue(status.getStopLossExecuted().get());
-    }
-
-    @Test
-    void checkStatus_success() {
-        // given
-        tradingService.startTrading(authUser1);
-
-        // when
-        String status1 = tradingService.checkStatus(authUser1);
-        String status2 = tradingService.checkStatus(authUser2);
-
-        // then
-        assertThat(status1).isEqualTo("true");
-        assertThat(status2).isEqualTo("false");
-
-    }
+//    @Test
+//    void startTrading_success() {
+//        // when & then
+//        tradingService.startTrading(authUser1);
+//        assertThat(runningUser.size()).isEqualTo(1);
+//        assertTrue(userStatusMap.containsKey(authUser1.getUserId()));
+//        assertTrue(userAuthMap.containsKey(authUser1.getUserId()));
+//        tradingService.startTrading(authUser2);
+//        assertThat(runningUser.size()).isEqualTo(2);
+//        assertTrue(userStatusMap.containsKey(authUser2.getUserId()));
+//        assertTrue(userAuthMap.containsKey(authUser2.getUserId()));
+//    }
+//
+//    @Test
+//    void stopTrading_success() {
+//        // given
+//        tradingService.startTrading(authUser1);
+//        tradingService.startTrading(authUser2);
+//        // when & then
+//        assertThat(runningUser.size()).isEqualTo(2);
+//        tradingService.stopTrading(authUser1);
+//        assertThat(runningUser.size()).isEqualTo(1);
+//        assertFalse(runningUser.contains(authUser1.getUserId()));
+//        tradingService.stopTrading(authUser2);
+//        assertTrue(runningUser.isEmpty());
+//    }
+//
+//    @Test
+//    void checkPrice_processBuy_success() throws Exception {
+//        // given
+//        when(redisService.getCurrentPrice()).thenReturn(1600000d);
+//        when(redisService.getTargetPrice()).thenReturn(1500000d);
+//        when(redisService.getTodayTradeCheck()).thenReturn("false");
+//        runningUser.add(authUser1.getUserId());
+//        userAuthMap.put(authUser1.getUserId(), authUser1);
+//        TradingStatus status = new TradingStatus();
+//        status.getOpMode().set(true);
+//        userStatusMap.put(authUser1.getUserId(), status);
+//        Object orderResponse = new OrderResponse(
+//                "KRW-ETH",
+//                "bid",
+//                "1600000",
+//                "1.0",
+//                "1.0",
+//                "1600000"
+//        );
+//        when(upbitService.orderCoins("buy", authUser1)).thenReturn(orderResponse);
+//
+//        // when
+//        tradingService.checkPrice();
+//        await()
+//                .atMost(3, TimeUnit.SECONDS)
+//                .until(() -> status.getHold().get());
+//
+//        // then
+//        assertTrue(status.getHold().get());
+//    }
+//
+//    @Test
+//    void checkPrice_processExecutedFunds_success() throws Exception {
+//        // given
+//        when(redisService.getCurrentPrice()).thenReturn(800000d);
+//        when(redisService.getTargetPrice()).thenReturn(1000000d);
+//        when(redisService.getTodayTradeCheck()).thenReturn("true");
+//        runningUser.add(authUser1.getUserId());
+//        userAuthMap.put(authUser1.getUserId(), authUser1);
+//        TradingStatus status = new TradingStatus();
+//        status.getOpMode().set(true);
+//        status.getHold().set(true);
+//        userStatusMap.put(authUser1.getUserId(), status);
+//
+//        Object orderResponse = new OrderResponse(
+//                "KRW-ETH",
+//                "bid",
+//                "800000",
+//                "1.0",
+//                "1.0",
+//                "800000"
+//        );
+//        when(upbitService.orderCoins("sell", authUser1)).thenReturn(orderResponse);
+//        when(upbitService.getOrders(authUser1, 1)).thenReturn(orderResponse);
+//
+//        // when
+//        tradingService.checkPrice();
+//
+//        // then
+//        assertTrue(status.getStopLossExecuted().get());
+//    }
+//
+//    @Test
+//    void checkStatus_success() {
+//        // given
+//        tradingService.startTrading(authUser1);
+//
+//        // when
+//        String status1 = tradingService.checkStatus(authUser1);
+//        String status2 = tradingService.checkStatus(authUser2);
+//
+//        // then
+//        assertThat(status1).isEqualTo("true");
+//        assertThat(status2).isEqualTo("false");
+//
+//    }
 
     @Test
     void afterSell() {

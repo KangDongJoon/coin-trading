@@ -8,10 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface BackDataRepository extends JpaRepository<BackData, Long> {
+    @Query("SELECT d FROM BackData d WHERE d.coin = :coin ORDER BY d.day DESC")
+    List<BackData> findLatestData(Pageable pageable, String coin);
 
-    @Query("SELECT b FROM BackData b WHERE b.tradingStatus = 'O' ORDER BY b.day DESC")
-    List<BackData> findAllActiveTrading();
-
-    @Query("SELECT d FROM BackData d ORDER BY d.day DESC")
-    List<BackData> findLatestData(Pageable pageable);
+    List<BackData> findByCoinOrderByDayDesc(String coin);
 }

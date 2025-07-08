@@ -14,8 +14,9 @@ public class BackData {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
     private String day;
+
+    private String coin;
 
     // 거래여부
     private String tradingStatus;
@@ -23,8 +24,9 @@ public class BackData {
     // 수익률
     private double returnRate;
 
-    public BackData(String day, String tradingStatus, double returnRate) {
+    public BackData(String day, String coin, String tradingStatus, double returnRate) {
         this.day = day;
+        this.coin = coin;
         this.tradingStatus = tradingStatus;
         this.returnRate = returnRate;
     }

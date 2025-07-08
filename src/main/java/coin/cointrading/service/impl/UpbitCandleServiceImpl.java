@@ -1,5 +1,6 @@
 package coin.cointrading.service.impl;
 
+import coin.cointrading.domain.Coin;
 import coin.cointrading.dto.SimpleCandleDTO;
 import coin.cointrading.dto.UpbitCandle;
 import coin.cointrading.service.UpbitCandleService;
@@ -22,12 +23,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UpbitCandleServiceImpl implements UpbitCandleService {
 
-    private final OkHttpClient okHttpClient; // OkHttpClient는 자동 주입
+    private final OkHttpClient okHttpClient;
 
     @Override
-    public String dayCandle() throws IOException {
+    public String dayCandle(Coin coin) throws IOException {
         Request request = new Request.Builder()
-                .url("https://api.upbit.com/v1/candles/days?market=KRW-ETH&count=2")
+                .url("https://api.upbit.com/v1/candles/days?market=KRW-" + coin + "&count=2")
                 .get()
                 .addHeader("accept", "application/json")
                 .build();
@@ -48,10 +49,10 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
     }
 
     @Override
-    public Double current() throws IOException {
+    public Double current(Coin coin) throws IOException {
         String serverUrl = "https://api.upbit.com";
         Request request = new Request.Builder()
-                .url(serverUrl + "/v1/ticker?markets=KRW-ETH")
+                .url(serverUrl + "/v1/ticker?markets=KRW-" + coin)
                 .get()
                 .addHeader("accept", "application/json")
                 .build();
@@ -71,8 +72,8 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
     }
 
     @Override
-    public Double checkTarget() throws IOException {
-        String candle = dayCandle();
+    public Double checkTarget(Coin coin) throws IOException {
+        String candle = dayCandle(coin);
         ObjectMapper objectMapper = new ObjectMapper();
 
         List<JsonNode> candles = objectMapper.readValue(candle, new TypeReference<>() {});

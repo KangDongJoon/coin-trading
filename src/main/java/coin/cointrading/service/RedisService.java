@@ -1,9 +1,10 @@
 package coin.cointrading.service;
 
+import coin.cointrading.domain.Coin;
 import coin.cointrading.dto.TradingStatus;
 import coin.cointrading.exception.CustomException;
 import coin.cointrading.exception.ErrorCode;
-import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -26,14 +28,19 @@ public class RedisService {
     private final ConcurrentHashMap<String, TradingStatus> userStatusMap;
     private final BackDataService backDataService;
     private final SchedulerControlService schedulerControlService;
+    @Getter
+    private final Map<Coin, Double> currentPriceMap;
+    @Getter
+    private final Map<Coin, Double> targetPriceMap;
+    @Getter
+    private final Map<Coin, String> todayTradeCheckMap;
 
-    @PostConstruct
+
+    @Scheduled(initialDelay = 3000, fixedDelay = Long.MAX_VALUE)
     public void initialize() throws IOException {
         updatePriceCache();
-        double targetPrice = upbitCandleService.checkTarget();
-        redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofDays(2));
-        setTodayTradeCheck("false");
-        log.info("목표가 최초 갱신: {}", targetPrice);
+        updateTargetPrice();
+        targetPriceLog();
     }
 
     // Refresh Token 저장
@@ -55,44 +62,52 @@ public class RedisService {
 
     @Scheduled(fixedDelay = 1000)
     public void updatePriceCache() throws IOException {
-        double currentPrice = upbitCandleService.current();
-
-        redisTemplate.opsForValue().set("CURRENT_PRICE", String.valueOf(currentPrice));
-
-        redisTemplate.expire("CURRENT_PRICE", Duration.ofSeconds(3));
+        for (Coin coin : Coin.values()) {
+            String currentPriceRedisKey = "CURRENT_PRICE_" + coin;
+            redisTemplate.opsForValue().set(currentPriceRedisKey, String.valueOf(upbitCandleService.current(coin)), Duration.ofSeconds(3));
+        }
     }
 
 
-    public double getCurrentPrice() {
-        String cachedPrice = redisTemplate.opsForValue().get("CURRENT_PRICE");
-        if (cachedPrice != null) {
-            return Double.parseDouble(cachedPrice);
+    public Map<Coin, Double> getCurrentPrice() {
+        try {
+            currentPriceMap.clear();
+            for (Coin coin : Coin.values()) {
+                String currentPriceRedisKey = "CURRENT_PRICE_" + coin;
+                String currentPrice = redisTemplate.opsForValue().get(currentPriceRedisKey);
+                if (currentPrice != null) {
+                    this.currentPriceMap.put(coin, Double.parseDouble(currentPrice));
+                }
+            }
+            return currentPriceMap;
+        } catch (Exception e) {
+            log.error("{}", ErrorCode.REDIS_NOT_FOUND.getMessage());
+            throw new CustomException(ErrorCode.REDIS_NOT_FOUND);
         }
-        log.error("{}", ErrorCode.REDIS_NOT_FOUND.getMessage());
-        throw new CustomException(ErrorCode.REDIS_NOT_FOUND);
     }
 
     @Scheduled(cron = "20 0 9 * * *")
     public void updateTargetPrice() {
-        double targetPrice = -1;
-
         try {
             schedulerControlService.setIsProcessing(true);
             log.info("🔴 목표가 갱신 중... checkPrice 멈춤");
             try {
-                targetPrice = upbitCandleService.checkTarget();
+                for (Coin coin : Coin.values()) {
+                    double targetPriceCoin = upbitCandleService.checkTarget(coin);
+                    targetPriceMap.put(coin, targetPriceCoin);
+
+                    String targetPriceRedisKey = "TARGET_PRICE_" + coin;
+                    redisTemplate.opsForValue().set(targetPriceRedisKey, String.valueOf(targetPriceCoin), Duration.ofDays(2));
+                }
             } catch (Exception e) {
                 log.error("⚠️ 목표가 가져오기 실패 - {}", e.getMessage());
-            }
-
-            // 목표가가 정상적으로 설정되지 않았다면 종료
-            if (targetPrice < 0) {
                 throw new CustomException(ErrorCode.REDIS_TARGET_PRICE_NOT_FOUND);
             }
 
-            redisTemplate.opsForValue().set("TARGET_PRICE", String.valueOf(targetPrice), Duration.ofDays(2));
-            setTodayTradeCheck("false");
-            log.info("✅ 목표가 갱신 완료: {}", targetPrice);
+            // 금일 거래 여부 초기화
+            for (Coin coin : Coin.values()) {
+                setTodayTradeCheck(coin, "false");
+            }
             log.info("✅ 매수 여부 초기화");
 
             for (String userId : userStatusMap.keySet()) {
@@ -109,25 +124,23 @@ public class RedisService {
         }
     }
 
-
-    public double getTargetPrice() {
-        String targetPrice = redisTemplate.opsForValue().get("TARGET_PRICE");
-        if (targetPrice == null) {
-            throw new CustomException(ErrorCode.REDIS_TARGET_PRICE_NOT_FOUND);
-        }
-        return Double.parseDouble(targetPrice);
-    }
-
     @Scheduled(cron = "0 10 9 * * *")
     public void updateDailyBackData() {
         backDataService.getData("3");
     }
 
-    public void setTodayTradeCheck(String flag) {
-        redisTemplate.opsForValue().set("TODAY_TRADE", flag, Duration.ofDays(2));
+    public void setTodayTradeCheck(Coin buyCoin, String flag) {
+        String todayTradeString = "TODAY_TRADE_" + buyCoin;
+        redisTemplate.opsForValue().set(todayTradeString, flag, Duration.ofDays(2));
+        todayTradeCheckMap.put(buyCoin, flag);
     }
 
-    public String getTodayTradeCheck() {
-        return redisTemplate.opsForValue().get("TODAY_TRADE");
+    private void targetPriceLog() {
+        log.info("====== 목표가 갱신 ======");
+        for (Coin coin : Coin.values()) {
+            String formattedPrice = String.format("%,.0f", targetPriceMap.get(coin));
+            log.info("{}: {}", coin.getKoreanName(), formattedPrice);
+        }
+        log.info("======================");
     }
 }
