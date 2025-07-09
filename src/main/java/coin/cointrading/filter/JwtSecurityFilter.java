@@ -38,7 +38,8 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
         if (requestURI.equals("/") || requestURI.equals("/auth/login")
                 || requestURI.equals("/auth/signup") || requestURI.equals("/auth/guide")
                 || requestURI.startsWith("/error") || requestURI.equals("/auth/returnrate")
-                || requestURI.equals("/auth/get-back-data") || requestURI.startsWith("/test")) {
+                || requestURI.equals("/auth/get-back-data") || requestURI.startsWith("/test")
+                || requestURI.startsWith("/images")) {
             chain.doFilter(httpRequest, httpResponse);
             return;
         }

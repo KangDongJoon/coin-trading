@@ -39,7 +39,7 @@ public class SecurityConfig {
                 .logout(AbstractHttpConfigurer::disable) // 로그아웃 비활성화 (JWT 방식이므로 필요 없음)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/").permitAll() // ✅ 메인 페이지는 인증 없이 접근 가능
-                        .requestMatchers("/auth/**", "/error", "/test/**").permitAll() // 로그인/회원가입 허용
+                        .requestMatchers("/auth/**", "/error", "/test/**", "/images/**").permitAll() // 로그인/회원가입 허용
                         .anyRequest().authenticated() // 그 외의 모든 요청은 인증 필요
                 )
                 .build();
