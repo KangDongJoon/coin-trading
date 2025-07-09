@@ -21,8 +21,13 @@ public class BackDataController {
     private final BackDataService backDataService;
 
     @GetMapping
-    public List<BackData> getBackData(@RequestParam(defaultValue = "BTC") Coin coin) {
+    public List<BackData> getBackData(@RequestParam(defaultValue = "BTC") Coin coin,
+                                      @RequestParam(defaultValue = "7") int days) {
+
+        List<BackData> backData = backDataService.getBackDataMap().get(coin);
         // 해당 코인 불러오기
-        return backDataService.getBackDataMap().get(coin);
+        return backData.stream()
+                .limit(days)
+                .toList();
     }
 }

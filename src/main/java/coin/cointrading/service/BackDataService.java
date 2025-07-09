@@ -53,7 +53,7 @@ public class BackDataService {
                 log.warn("====== 데이터가 없습니다 초기 데이터를 업데이트합니다 ======");
                 getData("200");
             }
-            backDataMap.put(coin, backDataRepository.findByCoinOrderByDayDesc(coin.name()));
+            backDataMap.put(coin, backDataRepository.findByCoinAndTradingStatusOrderByDayDesc(coin.name(), "O"));
         }
     }
 
@@ -80,12 +80,17 @@ public class BackDataService {
                     double returnRate = (todayTradePrice - targetPrice) / targetPrice * 100;
                     returnRate = Math.round(returnRate * 10.0) / 10.0;
 
+                    BackData findCoin = backDataRepository.findByCoinAndDay(coin.name(), day).orElse(null);
                     // DB 및 캐시 저장
-                    BackData backData = saveBackData(days, coin, tradingStatus, returnRate);
-                    if(backDataMap.containsKey(coin)){
-                        backDataMap.get(coin).add(backData);
+                    if (findCoin == null) { // 백데이터 중복 확인
+                        BackData newBackData = saveBackData(days, coin, tradingStatus, returnRate);
+                        if(backDataMap.containsKey(coin) && newBackData.getTradingStatus().equals("O")){
+                            backDataMap.get(coin).add(newBackData);
+                        }
+                        log.info("✅{}일 백데이터 추가 완료", days);
+                    } else {
+                        log.info("❌이미 해당 날짜의 백데이터가 존재합니다.");
                     }
-                    log.info("✅{}일 백데이터 추가 완료", days);
                 }
             } catch (IOException e) {
                 log.error("API 호출 중 오류 발생: {}", e.getMessage(), e);

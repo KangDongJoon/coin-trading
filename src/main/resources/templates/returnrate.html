@@ -125,7 +125,6 @@
 
         tableBody.innerHTML = "";
 
-        // 코인 필터 제거 (fetchData가 이미 필터된 데이터만 가져옴)
         const filteredData = allData
             .filter(item => item.tradingStatus === 'O')
             .sort((a, b) => new Date(b.day) - new Date(a.day));
