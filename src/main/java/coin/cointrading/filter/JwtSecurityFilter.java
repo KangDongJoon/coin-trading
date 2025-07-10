@@ -38,8 +38,7 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
         if (requestURI.equals("/") || requestURI.equals("/auth/login")
                 || requestURI.equals("/auth/signup") || requestURI.equals("/auth/guide")
                 || requestURI.startsWith("/error") || requestURI.equals("/auth/returnrate")
-                || requestURI.equals("/auth/get-back-data") || requestURI.startsWith("/test")
-                || requestURI.startsWith("/images")) {
+                || requestURI.equals("/auth/get-back-data") || requestURI.startsWith("/images")) {
             chain.doFilter(httpRequest, httpResponse);
             return;
         }
@@ -53,15 +52,17 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
 
                 if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     String userNickname = decodedJWT.getClaim("userNickname").asString();
-                    String upbitSecretKey = decodedJWT.getClaim("upbitSecretKey").asString();
-                    String upbitAccessKey = decodedJWT.getClaim("upbitAccessKey").asString();
 
-                    AuthUser authUser = new AuthUser(userId, userNickname, upbitSecretKey, upbitAccessKey);
+                    AuthUser authUser = new AuthUser(userId, userNickname);
 
                     JwtAuthenticationToken authenticationToken = new JwtAuthenticationToken(authUser);
                     authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(httpRequest));
 
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+
+                    // ✅ 인증 성공 → 다음 필터로 넘기고 종료
+                    chain.doFilter(httpRequest, httpResponse);
+                    return;
                 } else {
                     log.error("JWT 파싱 실패: userId가 null이거나 SecurityContext에 이미 인증 정보가 설정됨");
                 }
@@ -71,7 +72,9 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
                 return;
             }
         }
-        chain.doFilter(httpRequest, httpResponse);
+
+        // jwt가 없거나 검증 실패 시 로그인 페이지로 리다이렉트
+        httpResponse.sendRedirect("/auth/login");
     }
 
     // 쿠키에서 JWT 토큰을 추출

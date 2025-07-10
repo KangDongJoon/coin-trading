@@ -98,7 +98,7 @@
         const stopButton = document.getElementById("stopButton");
 
         // 서버에서 실행 상태를 가져옴
-        fetch('/v1/status')  // 사용자 ID를 함께 보내서 확인하도록 해야 할 수도 있음.
+        fetchWithToken('/v1/status')  // 사용자 ID를 함께 보내서 확인하도록 해야 할 수도 있음.
             .then(response => response.json())
             .then(data => {
                 const isRunning = data.isRunning;
@@ -152,7 +152,7 @@
         });
 
         // 서버 요청
-        fetch('/v1/starts', {
+        fetchWithToken('/v1/starts', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({coin: coinValue})
@@ -181,7 +181,7 @@
 
 
     function stopProgram() {
-        fetch('/v1/stops', {method: 'POST'})
+        fetchWithToken('/v1/stops', {method: 'POST'})
             .then(response => response.text())
             .then(data => {
                 alert(data);
@@ -191,7 +191,7 @@
     }
 
     function logout() {
-        fetch('/auth/logout', {method: 'POST'})
+        fetchWithToken('/auth/logout', {method: 'POST'})
             .then(response => {
                 if (!response.ok) {
                     throw new Error('로그아웃 실패');
@@ -209,6 +209,35 @@
             .catch(error => {
                 alert("오류 발생: " + error);
             });
+    }
+
+    async function fetchWithToken(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            credentials: 'include', // 쿠키 포함
+        });
+
+        if (response.status === 401) { // Access Token 만료 또는 인증 실패
+            // Refresh Token으로 토큰 재발급 요청
+            const refreshResponse = await fetch('/auth/refresh', {
+                method: 'POST',
+                credentials: 'include',
+            });
+
+            if (refreshResponse.ok) {
+                // 재발급 성공했으면 다시 원래 요청 재시도
+                return fetch(url, {
+                    ...options,
+                    credentials: 'include',
+                });
+            } else {
+                // 재발급 실패 -> 로그인 페이지로 이동
+                window.location.href = '/auth/login';
+                return null;
+            }
+        }
+
+        return response;
     }
 
 </script>

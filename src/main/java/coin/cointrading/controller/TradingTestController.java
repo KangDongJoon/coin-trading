@@ -1,7 +1,10 @@
 package coin.cointrading.controller;
 
 import coin.cointrading.domain.AuthUser;
-import coin.cointrading.dto.TradingStatus;
+import coin.cointrading.domain.User;
+import coin.cointrading.exception.CustomException;
+import coin.cointrading.exception.ErrorCode;
+import coin.cointrading.repository.UserRepository;
 import coin.cointrading.service.TradingService;
 import coin.cointrading.service.UpbitService;
 import lombok.RequiredArgsConstructor;
@@ -12,8 +15,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.concurrent.ConcurrentHashMap;
-
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -21,8 +22,7 @@ public class TradingTestController {
 
     private final TradingService tradingService;
     private final UpbitService upbitService;
-    private final ConcurrentHashMap<String, TradingStatus> userStatusMap;
-
+    private final UserRepository userRepository;
 
     // test API
     @PostMapping("/test/async")
@@ -45,9 +45,13 @@ public class TradingTestController {
         log.info("-----hold 변경완료-----");
     }
 
-    @PostMapping("/v1/test/orders/sell")
-    public ResponseEntity<Object> order(@AuthenticationPrincipal AuthUser authUser) throws Exception {
-        String decision = "sell";
-        return ResponseEntity.ok(upbitService.orderCoins(decision, authUser, userStatusMap.get(authUser.getUserId()).getSelectCoin()));
+    /**
+     * 계좌 확인
+     */
+    @GetMapping("/v1/accounts")
+    public ResponseEntity<Object> getAccount(@AuthenticationPrincipal AuthUser authUser) throws Exception {
+        User requestUser = userRepository.findByUserId(authUser.getUserId())
+                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_USER_NOT_FOUND));
+        return ResponseEntity.ok(upbitService.getAccount(requestUser));
     }
 }

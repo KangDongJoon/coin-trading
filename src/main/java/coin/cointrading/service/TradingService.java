@@ -2,10 +2,12 @@ package coin.cointrading.service;
 
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.Coin;
+import coin.cointrading.domain.User;
 import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.dto.TradingStatus;
 import coin.cointrading.exception.CustomException;
 import coin.cointrading.exception.ErrorCode;
+import coin.cointrading.repository.UserRepository;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,7 @@ public class TradingService {
     private final UpbitService upbitService;
     private final RedisService redisService;
     private final ExecutorService executor;
+    private final UserRepository userRepository;
 
     /**
      * 프로그램 실행
@@ -137,7 +140,7 @@ public class TradingService {
     }
 
     /**
-     * 조건에 부합하면 매수 진행
+     * 조건에 부합 시 매수 진행
      */
     private CompletableFuture<Void> processBuy(Coin buyCoin) {
         log.info("====== 매수 로직 실행 중 ======");
@@ -149,8 +152,8 @@ public class TradingService {
                     if (status.getOpMode().get() // 1일 후 거래
                             && !status.getStopLossExecuted().get() // 금일 손절 로직 실행 여부
                             && !status.getHold().get()) { // 매수 여부
-                        AuthUser authUser = userAuthMap.get(userId);
-                        return executeAsyncBuy(authUser, status);
+                        User requestUser = getRequestUserByIdOrThrow(userAuthMap.get(userId));
+                        return executeAsyncBuy(requestUser, status);
                     }
                     return null;
                 })
@@ -163,18 +166,18 @@ public class TradingService {
 
     /**
      * 비동기 처리로 Upbit 매수 API 요청 및 상태 변경
-     * @param authUser 로그인 유저
+     * @param requestUser 요청 유저
      * @param status   유저 거래 상태
      */
-    private CompletableFuture<Void> executeAsyncBuy(AuthUser authUser, TradingStatus status) {
+    private CompletableFuture<Void> executeAsyncBuy(User requestUser, TradingStatus status) {
         return CompletableFuture.supplyAsync(() -> {  // 🔹 'return' 추가
             try {
-                return upbitService.orderCoins("buy", authUser, status.getSelectCoin());
+                return upbitService.orderCoins("buy", requestUser, status.getSelectCoin());
             } catch (Exception e) {
                 log.error(e.getMessage());
                 throw new CustomException(ErrorCode.UPBIT_ORDER_FAIL);
             }
-        }, executor).thenAccept(result -> afterBuy(result, status, authUser));
+        }, executor).thenAccept(result -> afterBuy(result, status, requestUser));
     }
 
     /**
@@ -187,14 +190,14 @@ public class TradingService {
             if (status.getOpMode().get() // 동작 상태 확인
                     && !status.getStopLossExecuted().get() // 손절 여부 확인
                     && status.getHold().get()) { // 매수 여부 확인
-                AuthUser authUser = userAuthMap.get(userId);
-                executeAsyncSell(authUser, status);
+                User requestUser = getRequestUserByIdOrThrow(userAuthMap.get(userId));
+                executeAsyncSell(requestUser, status);
             }
         }
     }
 
     /**
-     * 조건에 부합하면 손전 진행
+     * 조건에 부합 시 손절 진행
      */
     private void processExecute() {
         log.info("====== 손절 로직 실행 중 ======");
@@ -203,9 +206,9 @@ public class TradingService {
                 .map(userId -> {
                     TradingStatus status = userStatusMap.get(userId);
                     if (status.getOpMode().get() && !status.getStopLossExecuted().get() && status.getHold().get()) {
-                        AuthUser authUser = userAuthMap.get(userId);
+                        User requestUser = getRequestUserByIdOrThrow(userAuthMap.get(userId));
                         status.getStopLossExecuted().set(true);
-                        return executeAsyncSell(authUser, status);
+                        return executeAsyncSell(requestUser, status);
                     }
                     return null;
                 })
@@ -218,15 +221,15 @@ public class TradingService {
 
     /**
      * 비동기 처리로 Upbit 매도 API 요청 및 상태 변경
-     * @param authUser 로그인 유저
+     * @param requestUser 로그인 유저
      * @param status   거래 상태
      */
-    private CompletableFuture<Void> executeAsyncSell(AuthUser authUser, TradingStatus status) {
+    private CompletableFuture<Void> executeAsyncSell(User requestUser, TradingStatus status) {
         log.info("====== 매도 로직 실행 중 ======");
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
-                        return upbitService.orderCoins("sell", authUser, status.getSelectCoin());
+                        return upbitService.orderCoins("sell", requestUser, status.getSelectCoin());
                     } catch (Exception e) {
                         log.error(e.getMessage());
                         throw new CustomException(ErrorCode.UPBIT_ORDER_FAIL);
@@ -236,13 +239,13 @@ public class TradingService {
                 CompletableFuture.supplyAsync(
                         () -> {
                             try {
-                                return upbitService.getOrders(authUser, 2, status.getSelectCoin());
+                                return upbitService.getOrders(requestUser, 2, status.getSelectCoin());
                             } catch (Exception e) {
                                 log.error(e.getMessage());
                                 throw new CustomException(ErrorCode.UPBIT_ORDER_LIST_READ_FAIL);
                             }
                         }, executor
-                ).thenAccept(result -> afterSell(result, status, authUser))
+                ).thenAccept(result -> afterSell(result, status, requestUser))
         );
     }
 
@@ -250,61 +253,58 @@ public class TradingService {
      * 매수 처리 이후 상태 변경 및 매수금액 확인
      * @param result   거래 결과
      * @param status   거래 상태
-     * @param authUser 로그인 유저
+     * @param requestUser 로그인 유저
      */
-    private void afterBuy(Object result, TradingStatus status, AuthUser authUser) {
+    private void afterBuy(Object result, TradingStatus status, User requestUser) {
         OrderResponse response = (OrderResponse) result;
         status.getHold().set(true);  // 매수 완료 상태로 변경
         double locked = Math.round(Double.parseDouble(response.getLocked()));
-        status.getBuyPrice().set(locked);  // 매수 금액 설정
 
         String formatted_locked = String.format("%,.0f", locked);
-        log.info("{}의 매수 금액: {}원", authUser.getUserId(), formatted_locked);
+        log.info("{}의 매수 금액: {}원(수수료 포함)", requestUser.getUserId(), formatted_locked);
     }
 
     /**
      * 매도 처리 후 상태 변경 및 수익률 확인
+     * 주문 처리 완료 전 주문 API 요청 시 매도에 대한 주문이 없기에 매수 기준으로 수익률 기준
      * @param result   거래 결과
      * @param status   거래 상태
-     * @param authUser 로그인 유저
+     * @param requestUser 로그인 유저
      */
-    private void afterSell(Object result, TradingStatus status, AuthUser authUser) {
+    private void afterSell(Object result, TradingStatus status, User requestUser) {
         status.getOpMode().set(false);
         status.getHold().set(false);
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> orders = (List<Map<String, Object>>) result;
 
-        double buyPrice = getTradingPrice(orders, "bid");
-        double sellPrice = getTradingPrice(orders, "ask");
-        double ror = (sellPrice - buyPrice) / buyPrice * 100;
-
-        log.info("{}의 매도 수익률: {}", authUser.getUserId(), String.format("%.1f%%", ror));
-    }
-
-    /**
-     * 주문 내역을 토대로 수익률 계산
-     * @param orders 주문 리스트
-     * @param side 매수, 매도 여부
-     * @return
-     */
-    private static double getTradingPrice(List<Map<String, Object>> orders, String side) {
-        String koreanSide = side.equals("bid") ? "매수" : "매도";
-
         Map<String, Object> order = orders.stream()
-                .filter(o -> side.equals(o.get("side")))
+                .filter(o -> "bid".equals(o.get("side")))
                 .findFirst()
-                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND, koreanSide));
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND, "매수"));
+
 
         double paid_fee = Double.parseDouble((String) order.get(("paid_fee")));
         double executed_funds = Double.parseDouble((String) order.get(("executed_funds")));
-        return executed_funds - paid_fee;
+        double executed_volume = Double.parseDouble((String) order.get("executed_volume"));
+
+        double buyPrice = executed_funds + paid_fee;
+
+        double currentPrice = redisService.getCurrentPrice().get(status.getSelectCoin());
+        double sellPrice = (executed_volume * currentPrice) * 0.9995;
+
+        double ror = (sellPrice - buyPrice) / buyPrice * 100;
+
+        log.info("{}의 매도 수익률: {}", requestUser.getUserId(), String.format("%.1f%%", ror));
+    }
+
+    private User getRequestUserByIdOrThrow(AuthUser authUser) {
+        return userRepository.findByUserId(authUser.getUserId())
+                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_USER_NOT_FOUND));
     }
 
     /**
      * 테스트 메서드들
-     * @param authUser
-     * @throws InterruptedException
      */
     public void asyncTest(AuthUser authUser) throws InterruptedException {
         processBuy(userStatusMap.get(authUser.getUserId()).getSelectCoin()); // 비동기 매수 실행

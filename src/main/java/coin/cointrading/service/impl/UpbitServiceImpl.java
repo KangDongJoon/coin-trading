@@ -1,7 +1,7 @@
 package coin.cointrading.service.impl;
 
-import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.Coin;
+import coin.cointrading.domain.User;
 import coin.cointrading.dto.AccountResponse;
 import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.service.UpbitService;
@@ -33,11 +33,12 @@ public class UpbitServiceImpl implements UpbitService {
     private final RestTemplate restTemplate;
 
     @Override
-    public Object getAccount(AuthUser authUser) throws Exception {
+    public Object getAccount(User requestUser) throws Exception {
         String accountUrl = serverUrl + "/v1/accounts";
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/json");
-        headers.set("Authorization", jwtTokenProvider.createAccountToken(authUser));
+
+        headers.set("Authorization", jwtTokenProvider.createAccountToken(requestUser));
         HttpEntity<?> entity = new HttpEntity<>(headers);
 
         return restTemplate.exchange(
@@ -50,10 +51,10 @@ public class UpbitServiceImpl implements UpbitService {
     }
 
     @Override
-    public Object orderCoins(String decision, AuthUser authUser, Coin selectCoin) throws Exception {
+    public Object orderCoins(String decision, User requestUser, Coin selectCoin) throws Exception {
 
         @SuppressWarnings("unchecked")
-        List<AccountResponse> account = (List<AccountResponse>) getAccount(authUser);
+        List<AccountResponse> account = (List<AccountResponse>) getAccount(requestUser);
         AccountResponse KRW = new AccountResponse();
         AccountResponse coinAccount = new AccountResponse();
         for (AccountResponse accountResponse : account) {
@@ -83,7 +84,8 @@ public class UpbitServiceImpl implements UpbitService {
         String orderUrl = serverUrl + "/v1/orders";
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/json");
-        headers.set("Authorization", jwtTokenProvider.createOrderToken(params, authUser));
+
+        headers.set("Authorization", jwtTokenProvider.createOrderToken(params, requestUser));
         HttpEntity<String> entity = new HttpEntity<>(new Gson().toJson(params), headers);
 
         return restTemplate.exchange(
@@ -95,7 +97,7 @@ public class UpbitServiceImpl implements UpbitService {
     }
 
     @Override
-    public Object getOrders(AuthUser authUser, int count, Coin selectCoin) {
+    public Object getOrders(User requestUser, int count, Coin selectCoin) {
         HashMap<String, String> params = new HashMap<>();
         params.put("market", selectCoin.getMarketCode());
 
@@ -119,7 +121,8 @@ public class UpbitServiceImpl implements UpbitService {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.set("Content-Type", "application/json");
-            headers.set("Authorization", jwtTokenProvider.createGetOrderToken(queryString, authUser));
+
+            headers.set("Authorization", jwtTokenProvider.createGetOrderToken(queryString, requestUser));
             HttpEntity<?> entity = new HttpEntity<>(headers);
 
             return restTemplate.exchange(
@@ -134,4 +137,5 @@ public class UpbitServiceImpl implements UpbitService {
             return null;
         }
     }
+
 }

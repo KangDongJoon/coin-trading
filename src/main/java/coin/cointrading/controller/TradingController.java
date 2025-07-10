@@ -1,10 +1,8 @@
 package coin.cointrading.controller;
 
 import coin.cointrading.domain.AuthUser;
-import coin.cointrading.domain.BackData;
 import coin.cointrading.dto.SelectCoin;
 import coin.cointrading.service.TradingService;
-import coin.cointrading.service.UpbitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -24,15 +21,6 @@ import java.util.Map;
 public class TradingController {
 
     private final TradingService tradingService;
-    private final UpbitService upbitService;
-
-    /**
-     * 계좌 확인
-     */
-    @GetMapping("/v1/accounts")
-    public ResponseEntity<Object> getAccount(@AuthenticationPrincipal AuthUser authUser) throws Exception {
-        return ResponseEntity.ok(upbitService.getAccount(authUser));
-    }
 
     /**
      * 프로그램 실행
@@ -71,11 +59,6 @@ public class TradingController {
         response.put("isRunning", tradingService.checkStatus(authUser));
         response.put("selectedCoin", tradingService.getUserStatusMap().get(authUser.getUserId()).getSelectCoin().name());
         return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/v1/backdata")
-    public List<BackData> getBackData() {
-        return null;
     }
 }
 

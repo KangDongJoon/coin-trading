@@ -4,10 +4,14 @@ import coin.cointrading.domain.AuthUser;
 import coin.cointrading.dto.LoginRequest;
 import coin.cointrading.dto.UserSignupRequest;
 import coin.cointrading.exception.CustomException;
+import coin.cointrading.exception.ErrorCode;
 import coin.cointrading.service.RedisService;
 import coin.cointrading.service.UserService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -45,7 +49,7 @@ public class UserController {
             // HttpOnly, Secure 쿠키 설정
             ResponseCookie cookie = ResponseCookie.from("Authorization", token)
                     .httpOnly(true)   // JavaScript에서 접근 불가
-                    .secure(false)
+                    .secure(true)
                     .path("/")        // 모든 경로에서 쿠키 사용 가능
                     .sameSite("Lax")
                     .build();
@@ -69,7 +73,7 @@ public class UserController {
             // 쿠키에서 JWT 토큰 삭제
             ResponseCookie cookie = ResponseCookie.from("Authorization", "")
                     .httpOnly(true)
-                    .secure(true)   // 운영 환경에서는 보통 secure=true로 설정
+                    .secure(false)   // 운영 환경에서는 보통 secure=true로 설정
                     .path("/")
                     .sameSite("Lax")
                     .maxAge(0)  // 쿠키 만료시킴
@@ -83,4 +87,29 @@ public class UserController {
         }
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        // 쿠키에서 Refresh Token 가져오기
+        String refreshToken = null;
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("RefreshToken".equals(cookie.getName())) {
+                    refreshToken = cookie.getValue();
+                    break;
+                }
+            }
+        }
+        if (refreshToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh Token 없음");
+        }
+
+        // Refresh Token 유효성 검사
+        // Access Token을 HttpOnly 쿠키로 설정 (클라이언트에 전달)
+        try {
+            response.addHeader("Set-Cookie", userService.tokenRefresh(refreshToken));
+            return ResponseEntity.ok("Access Token 재발급 성공");
+        } catch (CustomException e) {
+            throw new CustomException(ErrorCode.AUTH_NO_AUTHORIZATION_USER);
+        }
+    }
 }
