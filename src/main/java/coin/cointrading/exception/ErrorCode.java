@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum ErrorCode {
 
+    ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "%s 주문 확인 불가"),
     COIN_NOT_FOUND(HttpStatus.NOT_FOUND, "프로그램에서 거래 불가능한 코인입니다."),
 
     REDIS_NOT_FOUND(HttpStatus.NOT_FOUND, "캐싱된 가격이 없습니다."),

@@ -274,24 +274,38 @@ public class TradingService {
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> orders = (List<Map<String, Object>>) result;
-        log.info("afterSell orders: {}", orders);
 
-        Map<String, Object> buyOrder = orders.get(1);
-        double paid_fee_buy = Double.parseDouble((String) buyOrder.get(("paid_fee")));
-        double executed_funds_buy = Double.parseDouble((String) buyOrder.get(("executed_funds")));
-        double buyPrice = executed_funds_buy - paid_fee_buy;
-
-        Map<String, Object> sellOrder = orders.get(0);
-        double paid_fee_sell = Double.parseDouble((String) sellOrder.get("paid_fee"));
-        double executed_funds_sell = Double.parseDouble((String) sellOrder.get("executed_funds"));
-        double sellPrice = executed_funds_sell - paid_fee_sell;
-
+        double buyPrice = getTradingPrice(orders, "bid");
+        double sellPrice = getTradingPrice(orders, "ask");
         double ror = (sellPrice - buyPrice) / buyPrice * 100;
-        String formatted_ror = String.format("%.1f%%", ror);
 
-        log.info("{}의 매도 수익률: {}", authUser.getUserId(), formatted_ror);
+        log.info("{}의 매도 수익률: {}", authUser.getUserId(), String.format("%.1f%%", ror));
     }
 
+    /**
+     * 주문 내역을 토대로 수익률 계산
+     * @param orders 주문 리스트
+     * @param side 매수, 매도 여부
+     * @return
+     */
+    private static double getTradingPrice(List<Map<String, Object>> orders, String side) {
+        String koreanSide = side.equals("bid") ? "매수" : "매도";
+
+        Map<String, Object> order = orders.stream()
+                .filter(o -> side.equals(o.get("side")))
+                .findFirst()
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND, koreanSide));
+
+        double paid_fee = Double.parseDouble((String) order.get(("paid_fee")));
+        double executed_funds = Double.parseDouble((String) order.get(("executed_funds")));
+        return executed_funds - paid_fee;
+    }
+
+    /**
+     * 테스트 메서드들
+     * @param authUser
+     * @throws InterruptedException
+     */
     public void asyncTest(AuthUser authUser) throws InterruptedException {
         processBuy(userStatusMap.get(authUser.getUserId()).getSelectCoin()); // 비동기 매수 실행
         Thread.sleep(6000);
