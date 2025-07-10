@@ -23,6 +23,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -85,7 +86,9 @@ public class BackDataService {
                     if (findCoin == null) { // 백데이터 중복 확인
                         BackData newBackData = saveBackData(days, coin, tradingStatus, returnRate);
                         if(backDataMap.containsKey(coin) && newBackData.getTradingStatus().equals("O")){
-                            backDataMap.get(coin).add(newBackData);
+                            List<BackData> backDataList = backDataMap.get(coin);
+                            backDataList.add(newBackData);
+                            backDataList.sort(Comparator.comparing(BackData::getDay).reversed());
                         }
                         log.info("✅{}일 백데이터 추가 완료", days);
                     } else {
