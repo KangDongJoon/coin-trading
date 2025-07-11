@@ -49,7 +49,7 @@ public class UserController {
             // HttpOnly, Secure 쿠키 설정
             ResponseCookie cookie = ResponseCookie.from("Authorization", token)
                     .httpOnly(true)   // JavaScript에서 접근 불가
-                    .secure(true)
+                    .secure(false)
                     .path("/")        // 모든 경로에서 쿠키 사용 가능
                     .sameSite("Lax")
                     .build();
