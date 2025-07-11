@@ -1,10 +1,13 @@
-package coin.cointrading.service;
+package coin.cointrading.service.impl;
 
+import coin.cointrading.domain.Coin;
 import coin.cointrading.dto.SimpleCandleDTO;
 import coin.cointrading.dto.UpbitCandle;
+import coin.cointrading.service.UpbitCandleService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -17,22 +20,21 @@ import java.util.List;
 
 @Service
 @Primary
+@RequiredArgsConstructor
 public class UpbitCandleServiceImpl implements UpbitCandleService {
 
-    private final String serverUrl = "https://api.upbit.com";
+    private final OkHttpClient okHttpClient;
 
     @Override
-    public String dayCandle() throws IOException {
-        OkHttpClient client = new OkHttpClient();
-
+    public String dayCandle(Coin coin) throws IOException {
         Request request = new Request.Builder()
-                .url("https://api.upbit.com/v1/candles/days?market=KRW-ETH&count=2")
+                .url("https://api.upbit.com/v1/candles/days?market=KRW-" + coin + "&count=2")
                 .get()
                 .addHeader("accept", "application/json")
                 .build();
 
         // try-with-resources 구문을 사용하여 자동으로 닫히도록 함
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = okHttpClient.newCall(request).execute()) {
             String jsonResponse = response.body().string();
 
             // Jackson을 이용한 JSON 파싱
@@ -47,19 +49,19 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
     }
 
     @Override
-    public Double current() throws IOException {
-        OkHttpClient client = new OkHttpClient();
-
+    public Double current(Coin coin) throws IOException {
+        String serverUrl = "https://api.upbit.com";
         Request request = new Request.Builder()
-                .url(serverUrl + "/v1/ticker?markets=KRW-ETH")
+                .url(serverUrl + "/v1/ticker?markets=KRW-" + coin)
                 .get()
                 .addHeader("accept", "application/json")
                 .build();
 
         // try-with-resources를 사용하여 자동으로 response 닫기
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = okHttpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
 
+            assert response.body() != null;
             String jsonResponse = response.body().string();
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode jsonNode = objectMapper.readTree(jsonResponse);
@@ -70,18 +72,16 @@ public class UpbitCandleServiceImpl implements UpbitCandleService {
     }
 
     @Override
-    public Double checkTarget() throws IOException {
-        String candle = dayCandle();
+    public Double checkTarget(Coin coin) throws IOException {
+        String candle = dayCandle(coin);
         ObjectMapper objectMapper = new ObjectMapper();
 
-        List<JsonNode> candles = objectMapper.readValue(candle, new TypeReference<>() {
-        });
+        List<JsonNode> candles = objectMapper.readValue(candle, new TypeReference<>() {});
         JsonNode yesterday = candles.get(1);
         double lowPrice = yesterday.get("low_price").asDouble();
         double highPrice = yesterday.get("high_price").asDouble();
         double targetPoint = (highPrice - lowPrice) * 0.5;
-        double targetPrice = yesterday.get("trade_price").asDouble() + targetPoint;
 
-        return targetPrice;
+        return yesterday.get("trade_price").asDouble() + targetPoint;
     }
 }

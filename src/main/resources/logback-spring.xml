@@ -7,12 +7,11 @@
         </encoder>
     </appender>
 
-
     <!-- 파일 로그 저장 -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/myapp.log</file>
+        <file>logs/myapp.log</file>  <!-- 절대 경로로 변경 -->
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!-- 로그 파일을 날짜별로 분할 (예: myapp-2025-02-13.log) -->
+            <!-- 로그 파일을 날짜별로 분할 -->
             <fileNamePattern>/var/log/myapp-%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>  <!-- 30일치 로그 보관 -->
             <totalSizeCap>1GB</totalSizeCap>  <!-- 전체 로그 용량 제한 -->
@@ -22,10 +21,10 @@
         </encoder>
     </appender>
 
-    <!-- 로그 레벨 설정 (INFO 이상만 파일 저장) -->
-    <!-- 로깅 레벨 및 Appender 설정 -->
+    <!-- 로그 레벨 설정 (INFO 이상 로그 저장) -->
     <root level="info">
-        <appender-ref ref="STDOUT"/>  <!-- 콘솔에 출력 -->
+        <appender-ref ref="STDOUT"/>  <!-- 콘솔 출력 -->
         <appender-ref ref="FILE"/>    <!-- 파일에 기록 -->
     </root>
+
 </configuration>

@@ -17,11 +17,49 @@
             padding: 8px;
             text-align: center;
         }
+        /* 로딩 중 메시지 스타일 */
+        #loading-row {
+            text-align: center;
+            font-weight: bold;
+            color: #555;
+        }
+        .error-message {
+            color: red;
+            text-align: center;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
 <h2>BackData Table</h2>
+
+<!-- 평균 수익률 표시 -->
+<div id="average-return" style="margin-top: 10px; font-weight: bold;"></div>
+
+<!-- 코인 선택 드롭다운 -->
+<div style="margin-bottom: 10px;">
+    <label for="coin-select">코인 선택:</label>
+    <select id="coin-select" onchange="handleSelectCoinChange(this)">
+        <option value="BTC">비트코인 (BTC)</option>
+        <option value="ETH">이더리움 (ETH)</option>
+        <option value="XRP">리플 (XRP)</option>
+    </select>
+</div>
+
+<!-- 드롭다운 메뉴 -->
+<div style="margin-bottom: 10px;">
+    <label for="data-count-select">표시할 데이터 수:</label>
+    <select id="data-count-select" onchange="handleSelectChange(this)">
+        <option value="7">최근 7거래일</option>
+        <option value="30">최근 30거래일</option>
+        <option value="90">최근 90거래일</option>
+    </select>
+</div>
+
+<!-- 날짜 구간 표시 -->
+<div id="date-range" style="margin-bottom: 10px; font-weight: bold;"></div>
+
 <table>
     <thead>
     <tr>
@@ -31,46 +69,109 @@
     </tr>
     </thead>
     <tbody id="table-body">
-    <!-- 데이터가 여기에 추가됨 -->
+    <tr id="loading-row">
+        <td colspan="3">📊 데이터를 불러오는 중...</td>
+    </tr>
     </tbody>
 </table>
 
 <script>
     const API_BASE_URL = window.location.origin.includes("localhost")
-        ? "http://localhost"
-        : window.location.origin;
+        ? "http://localhost:8080"
+        : "http://43.201.244.141:8080";
 
-    const API_URL = `${API_BASE_URL}:8080/v1/backdata`; // API 경로
+    const API_URL = `${API_BASE_URL}/auth/backdatas`;
+    let allData = [];
+    let dataCount = 7; // 기본값
+    let selectCoin = "BTC";
+
+    // 드롭다운 변경 시 호출
+    function handleSelectChange(selectElement) {
+        dataCount = parseInt(selectElement.value);
+        fetchData();
+    }
+
+    function handleSelectCoinChange(selectElement) {
+        selectCoin = selectElement.value;
+        fetchData()
+    }
 
     async function fetchData() {
+        const tableBody = document.getElementById("table-body");
+        tableBody.innerHTML = `<tr id="loading-row"><td colspan="3">📊 데이터를 불러오는 중...</td></tr>`;
+
+        const url = `${API_URL}?coin=${selectCoin}&days=${dataCount}`;
+
         try {
-            const response = await fetch(API_URL);
+            const response = await fetch(url);
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                tableBody.innerHTML = `<tr><td colspan="3" class="error-message">❌ 데이터 로드 실패 (Status: ${response.status})</td></tr>`;
+                return;
             }
-            const data = await response.json();  // 백엔드에서 받아온 JSON 데이터
-
-            const tableBody = document.getElementById("table-body");
-            tableBody.innerHTML = ""; // 기존 데이터 초기화
-
-            data.forEach(item => {
-                const row = document.createElement("tr");
-                row.innerHTML = `
-                    <td>${item.day}</td>
-                    <td>${item.tradingStatus}</td>
-                    <td>${item.returnRate}%</td>
-                `;
-                tableBody.appendChild(row);
-            });
-
+            allData = await response.json();
+            renderTable();
         } catch (error) {
             console.error("데이터 불러오기 실패:", error);
-            alert("데이터를 불러오는 중 오류가 발생했습니다.");
+            tableBody.innerHTML = `<tr><td colspan="3" class="error-message">❌ 데이터 로드 실패</td></tr>`;
         }
     }
 
-    fetchData();  // 페이지 로드 시 데이터 가져오기
+
+
+    function renderTable() {
+        const tableBody = document.getElementById("table-body");
+        const avgReturnEl = document.getElementById("average-return");
+        const dateRangeEl = document.getElementById("date-range");
+
+        tableBody.innerHTML = "";
+
+        const filteredData = allData
+            .filter(item => item.tradingStatus === 'O')
+            .sort((a, b) => new Date(b.day) - new Date(a.day));
+
+        const limit = Math.min(dataCount, filteredData.length);
+        const selectedData = filteredData.slice(0, limit);
+
+        let totalReturn = 1;
+
+        selectedData.forEach(item => {
+            const row = document.createElement("tr");
+            const returnRateColor = item.returnRate >= 0 ? "green" : "red";
+
+            row.innerHTML = `
+            <td>${item.day}</td>
+            <td>${item.tradingStatus}</td>
+            <td style="color: ${returnRateColor}; font-weight: bold;">${item.returnRate}%</td>
+        `;
+            tableBody.appendChild(row);
+
+            totalReturn *= (1 + item.returnRate / 100);
+        });
+
+        const avgReturn = selectedData.length > 0 ? ((totalReturn - 1) * 100).toFixed(2) : 0;
+        const avgColor = avgReturn >= 0 ? "green" : "red";
+
+        avgReturnEl.innerHTML = `
+        📈 누적 수익률(복리 계산) (${limit}거래일):
+        <span style="color: ${avgColor}">${avgReturn}%</span>
+        ${limit < dataCount ? `<span style="color: gray;">(현재 저장된 ${limit} 거래일 까지만 표시됨)</span>` : ""}
+    `;
+
+        if (selectedData.length >= 2) {
+            const startDate = new Date(selectedData[selectedData.length - 1].day);
+            const endDate = new Date(selectedData[0].day);
+            const diffTime = Math.abs(endDate - startDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            dateRangeEl.innerHTML = `📅 기간: ${selectedData[selectedData.length - 1].day} ~ ${selectedData[0].day} (${diffDays}일)`;
+        } else {
+            dateRangeEl.innerHTML = "";
+        }
+    }
+
+    fetchData();
+    setInterval(fetchData, 600000);
 </script>
 
 </body>
+
 </html>

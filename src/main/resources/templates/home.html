@@ -10,15 +10,18 @@
             text-align: center;
             margin: 50px;
         }
+
         h1 {
             color: #333;
         }
+
         .btn-container {
             display: flex;
             flex-direction: column; /* 버튼을 위아래로 배치 */
             align-items: center;
             gap: 10px; /* 버튼 사이 간격 */
         }
+
         button {
             width: 200px;
             padding: 10px;
@@ -30,52 +33,93 @@
             border-radius: 5px;
             transition: background-color 0.3s;
         }
+
         button:hover {
             background-color: #0056b3;
         }
+
+        .button {
+            background-color: #218838;
+        }
+
+        .button:hover {
+            background-color: #218838;
+        }
+
+        .coin-options {
+            display: flex;
+            justify-content: center; /* 가운데 정렬 */
+            gap: 20px; /* 버튼 간격 */
+            margin-bottom: 20px;
+            font-size: 18px; /* 글자 크기 */
+        }
+
         #stopButton {
             display: none; /* 처음에는 숨김 */
             background-color: #dc3545;
         }
+
         #stopButton:hover {
             background-color: #c82333;
         }
-        #returnRateButton {
-            background-color: #28a745;
-        }
-        #returnRateButton:hover {
-            background-color: #218838;
+
+        #logoutButton {
+            background-color: #333333;
         }
     </style>
 </head>
 <body>
 
 <h1>환영합니다!</h1>
-<p>여기에서 프로그램을 실행할 수 있습니다.</p>
+<!-- 코인 선택 라디오 버튼 -->
+<h3>매매할 코인을 선택해 주세요
+    <div class="coin-options">
+        <label><input type="radio" name="coin" value="BTC"> 비트코인</label>
+        <label><input type="radio" name="coin" value="ETH"> 이더리움</label>
+        <label><input type="radio" name="coin" value="XRP"> 리플</label>
+    </div>
+</h3>
 
 <div class="btn-container">
     <button id="startButton" onclick="startProgram()">프로그램 동작</button>
     <button id="stopButton" onclick="stopProgram()">중단하기</button>
-    <button id="returnRateButton" onclick="goToReturnRate()">수익률 페이지로 이동</button>
+    <button id="returnRateButton" class="button" type="button" onclick="goToReturnRate()">수익률 페이지로 이동</button>
+    <button id="logoutButton" onclick="logout()">로그아웃</button>
 </div>
 
 <script>
+    function goToReturnRate() {
+        window.location.href = "/auth/returnrate"; // 수익률 페이지로 이동
+    }
+
     // 페이지 로드 시 서버에서 실행 상태를 확인하여 버튼 상태 설정
-    window.onload = function() {
+    window.onload = function () {
         const startButton = document.getElementById("startButton");
         const stopButton = document.getElementById("stopButton");
 
         // 서버에서 실행 상태를 가져옴
-        fetch('/v1/status')  // 사용자 ID를 함께 보내서 확인하도록 해야 할 수도 있음.
+        fetchWithToken('/v1/status')  // 사용자 ID를 함께 보내서 확인하도록 해야 할 수도 있음.
             .then(response => response.json())
             .then(data => {
                 const isRunning = data.isRunning;
+                const selectedCoin = data.selectedCoin;
+
+                if (selectedCoin) {
+                    const radioToCheck = document.querySelector(`input[name="coin"][value="${selectedCoin}"]`);
+                    if (radioToCheck) {
+                        radioToCheck.checked = true;
+                    }
+                }
 
                 // 실행 중인 경우 버튼 상태 업데이트
                 if (isRunning === "true") {
                     startButton.textContent = "동작 중..."; // 버튼 텍스트 변경
                     startButton.disabled = true; // 시작 버튼 비활성화
                     stopButton.style.display = "block"; // 중단하기 버튼 표시
+                    // 실행 중이면 코인 선택 비활성화
+                    document.querySelectorAll('input[name="coin"]').forEach(radio => {
+                        radio.disabled = true;
+                    });
                 } else {
                     stopButton.style.display = "none"; // 중단하기 버튼 숨김
                 }
@@ -89,22 +133,55 @@
         const startButton = document.getElementById("startButton");
         const stopButton = document.getElementById("stopButton");
 
-        startButton.textContent = "동작 중..."; // 버튼 텍스트 변경
-        startButton.disabled = true; // 시작 버튼 비활성화
-        stopButton.style.display = "block"; // 중단하기 버튼 표시
+        const selectedCoin = document.querySelector('input[name="coin"]:checked');
+        if (!selectedCoin) {
+            alert("코인을 선택하세요!");
+            return;
+        }
 
-        // POST 요청으로 서버에 프로그램 시작 요청
-        fetch('/v1/starts', { method: 'POST' })
+        const coinValue = selectedCoin.value;
+
+        // 버튼 상태 설정
+        startButton.textContent = "동작 중...";
+        startButton.disabled = true;
+        stopButton.style.display = "block";
+
+        // ⭐ 모든 코인 라디오 버튼 비활성화
+        document.querySelectorAll('input[name="coin"]').forEach(radio => {
+            radio.disabled = true;
+        });
+
+        // 서버 요청
+        fetchWithToken('/v1/starts', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({coin: coinValue})
+        })
             .then(response => response.text())
             .then(data => alert(data))
             .catch(error => {
                 alert("오류 발생: " + error);
-                resetButtons(); // 오류 발생 시 버튼 원래대로 복원
+                resetButtons(); // 오류 발생 시 상태 복구
             });
     }
 
+    function resetButtons() {
+        const startButton = document.getElementById("startButton");
+        const stopButton = document.getElementById("stopButton");
+
+        startButton.textContent = "프로그램 동작";
+        startButton.disabled = false;
+        stopButton.style.display = "none";
+
+        // ⭐ 코인 선택 다시 활성화
+        document.querySelectorAll('input[name="coin"]').forEach(radio => {
+            radio.disabled = false;
+        });
+    }
+
+
     function stopProgram() {
-        fetch('/v1/stops', { method: 'POST' })
+        fetchWithToken('/v1/stops', {method: 'POST'})
             .then(response => response.text())
             .then(data => {
                 alert(data);
@@ -113,18 +190,56 @@
             .catch(error => alert("오류 발생: " + error));
     }
 
-    function resetButtons() {
-        const startButton = document.getElementById("startButton");
-        const stopButton = document.getElementById("stopButton");
+    function logout() {
+        fetchWithToken('/auth/logout', {method: 'POST'})
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('로그아웃 실패');
+                }
+                return response.text();
+            })
+            .then(data => {
+                alert(data);  // 로그아웃 성공 메시지
 
-        startButton.textContent = "프로그램 동작"; // 버튼 원래 텍스트
-        startButton.disabled = false; // 버튼 다시 활성화
-        stopButton.style.display = "none"; // 중단하기 버튼 숨김
+                // 버튼 초기화나 UI 업데이트 함수
+                resetButtons();
+
+                window.location.href = '/auth/login';  // 로그인 페이지로 리다이렉트
+            })
+            .catch(error => {
+                alert("오류 발생: " + error);
+            });
     }
 
-    function goToReturnRate() {
-        window.location.href = "/returnrate"; // 수익률 페이지로 이동
+    async function fetchWithToken(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            credentials: 'include', // 쿠키 포함
+        });
+
+        if (response.status === 401) { // Access Token 만료 또는 인증 실패
+            // Refresh Token으로 토큰 재발급 요청
+            const refreshResponse = await fetch('/auth/refresh', {
+                method: 'POST',
+                credentials: 'include',
+            });
+
+            if (refreshResponse.ok) {
+                // 재발급 성공했으면 다시 원래 요청 재시도
+                return fetch(url, {
+                    ...options,
+                    credentials: 'include',
+                });
+            } else {
+                // 재발급 실패 -> 로그인 페이지로 이동
+                window.location.href = '/auth/login';
+                return null;
+            }
+        }
+
+        return response;
     }
+
 </script>
 
 </body>

@@ -6,11 +6,17 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum ErrorCode {
 
+    ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "%s 주문 확인 불가"),
+    COIN_NOT_FOUND(HttpStatus.NOT_FOUND, "프로그램에서 거래 불가능한 코인입니다."),
+
     REDIS_NOT_FOUND(HttpStatus.NOT_FOUND, "캐싱된 가격이 없습니다."),
+    REDIS_RETRY_FAIL(HttpStatus.NOT_FOUND, "갱신 실패."),
+    REDIS_TARGET_PRICE_NOT_FOUND(HttpStatus.NOT_FOUND, "캐싱된 목표가가 없습니다."),
 
     TRADING_ALREADY_GENERATE(HttpStatus.CONFLICT, "이미 프로그램이 동작중입니다."),
     TRADING_NOT_FOUND(HttpStatus.NOT_FOUND, "실행중인 프로그램이 없습니다."),
 
+    AUTH_NO_AUTHORIZATION_USER(HttpStatus.UNAUTHORIZED, "비인가 접속입니다."),
     AUTH_PASSWORD_BAD_REQUEST(HttpStatus.BAD_REQUEST, "비밀번호가 틀렸습니다."),
     AUTH_EXIST_ID(HttpStatus.CONFLICT, "이미 가입된 ID입니다."),
     AUTH_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지않는 ID입니다."),
@@ -21,6 +27,7 @@ public enum ErrorCode {
 
     UPBIT_ORDER_FAIL(HttpStatus.BAD_REQUEST, "매수 로직 실패"),
     UPBIT_ORDER_LIST_READ_FAIL(HttpStatus.BAD_REQUEST, "매매내역 확인 실패");
+
 
     private final HttpStatus status;
     private final String message;

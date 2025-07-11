@@ -69,6 +69,14 @@
             font-size: 14px;
             margin-top: 10px;
         }
+
+        #returnRateButton {
+            background-color: #28a745;
+        }
+
+        #returnRateButton:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
@@ -82,12 +90,17 @@
         <div class="button-container">
             <button type="submit" class="button">로그인</button>
             <a href="/auth/signup" class="button">회원가입</a>
+            <button id="returnRateButton" class="button" type="button" onclick="goToReturnRate()">수익률 페이지로 이동</button>
             <a href="/auth/guide" class="button button-guide">가이드</a> <!-- 가이드 버튼 추가 -->
         </div>
     </form>
 </div>
 
 <script>
+    function goToReturnRate() {
+        window.location.href = "/auth/returnrate"; // 수익률 페이지로 이동
+    }
+
     document.getElementById("login-Form").addEventListener("submit", async function (event) {
         event.preventDefault(); // 기본 제출 방지
 
