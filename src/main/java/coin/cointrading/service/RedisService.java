@@ -33,7 +33,10 @@ public class RedisService {
     @Getter
     private final Map<Coin, Double> targetPriceMap;
     @Getter
-    private final Map<Coin, String> todayTradeCheckMap;
+    private final Map<Coin, Boolean> todayTradeCheckMap;
+    @Getter
+    private final Map<Coin, Boolean> todayExecutedCheckMap;
+
 
 
     @Scheduled(initialDelay = 3000, fixedDelay = Long.MAX_VALUE)
@@ -94,9 +97,10 @@ public class RedisService {
                 throw new CustomException(ErrorCode.REDIS_TARGET_PRICE_NOT_FOUND);
             }
 
-            // 금일 거래 여부 초기화
+            // 금일 거래 및 손절 여부 초기화
             for (Coin coin : Coin.values()) {
-                setTodayTradeCheck(coin, "false");
+                todayTradeCheckMap.put(coin, false);
+                todayExecutedCheckMap.put(coin, false);
             }
             log.info("✅ 매수 여부 초기화");
 
@@ -104,7 +108,6 @@ public class RedisService {
                 TradingStatus status = userStatusMap.get(userId);
                 if (!status.getOpMode().get()) {
                     status.getOpMode().set(true);
-                    status.getStopLossExecuted().set(false);
                     log.info("🔹 {}의 op_mode 활성화", userId);
                 }
             }
@@ -119,10 +122,12 @@ public class RedisService {
         backDataService.getData("3");
     }
 
-    public void setTodayTradeCheck(Coin buyCoin, String flag) {
-        String todayTradeString = "TODAY_TRADE_" + buyCoin;
-        redisTemplate.opsForValue().set(todayTradeString, flag, Duration.ofDays(2));
-        todayTradeCheckMap.put(buyCoin, flag);
+    public void setTodayTrade(Coin coin, Boolean flag) {
+        todayTradeCheckMap.put(coin, flag);
+    }
+
+    public void setTodayExecuted(Coin coin, Boolean flag) {
+        todayExecutedCheckMap.put(coin, flag);
     }
 
     private void targetPriceLog() {
