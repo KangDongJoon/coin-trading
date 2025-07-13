@@ -115,7 +115,7 @@ public class TradingService {
 
         try {
             for (Coin coin : Coin.values()) {
-                Double currentPrice = redisService.getCurrentPrice().get(coin);
+                Double currentPrice = redisService.getCurrentPriceMap().get(coin);
                 Double targetPrice = redisService.getTargetPriceMap().get(coin);
                 String todayTradeCheck = redisService.getTodayTradeCheckMap().get(coin);
 
@@ -290,7 +290,7 @@ public class TradingService {
 
         double buyPrice = executed_funds + paid_fee;
 
-        double currentPrice = redisService.getCurrentPrice().get(status.getSelectCoin());
+        double currentPrice = redisService.getCurrentPriceMap().get(status.getSelectCoin());
         double sellPrice = (executed_volume * currentPrice) * 0.9995;
 
         double ror = (sellPrice - buyPrice) / buyPrice * 100;

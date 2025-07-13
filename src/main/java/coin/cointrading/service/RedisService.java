@@ -62,27 +62,17 @@ public class RedisService {
 
     @Scheduled(fixedDelay = 1000)
     public void updatePriceCache() throws IOException {
-        for (Coin coin : Coin.values()) {
-            String currentPriceRedisKey = "CURRENT_PRICE_" + coin;
-            redisTemplate.opsForValue().set(currentPriceRedisKey, String.valueOf(upbitCandleService.current(coin)), Duration.ofSeconds(3));
-        }
-    }
-
-
-    public Map<Coin, Double> getCurrentPrice() {
         try {
-            currentPriceMap.clear();
+
             for (Coin coin : Coin.values()) {
                 String currentPriceRedisKey = "CURRENT_PRICE_" + coin;
-                String currentPrice = redisTemplate.opsForValue().get(currentPriceRedisKey);
-                if (currentPrice != null) {
-                    this.currentPriceMap.put(coin, Double.parseDouble(currentPrice));
-                }
+                Double currentPrice = upbitCandleService.current(coin);
+                redisTemplate.opsForValue().set(currentPriceRedisKey, String.valueOf(currentPrice), Duration.ofSeconds(3));
+                this.currentPriceMap.put(coin, currentPrice);
             }
-            return currentPriceMap;
         } catch (Exception e) {
-            log.error("{}", ErrorCode.REDIS_NOT_FOUND.getMessage());
-            throw new CustomException(ErrorCode.REDIS_NOT_FOUND);
+            log.error("{}", e.getMessage());
+            throw e;
         }
     }
 
