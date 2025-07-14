@@ -29,7 +29,12 @@ public class RedisConfig {
     }
 
     @Bean
-    public Map<Coin, String> todayTradeCheckMap() {
+    public Map<Coin, Boolean> todayTradeCheckMap() {
+        return new HashMap<>();
+    }
+
+    @Bean
+    public Map<Coin, Boolean> todayExecutedCheckMap() {
         return new HashMap<>();
     }
 

@@ -115,12 +115,13 @@ public class TradingService {
 
         try {
             for (Coin coin : Coin.values()) {
-                Double currentPrice = redisService.getCurrentPrice().get(coin);
+                Double currentPrice = redisService.getCurrentPriceMap().get(coin);
                 Double targetPrice = redisService.getTargetPriceMap().get(coin);
-                String todayTradeCheck = redisService.getTodayTradeCheckMap().get(coin);
+                Boolean todayTradeCheck = redisService.getTodayTradeCheckMap().get(coin);
+                Boolean todayExecuted = redisService.getTodayExecutedCheckMap().get(coin);
 
                 // 조건 매수
-                if (todayTradeCheck.equals("false")) {
+                if (!todayTradeCheck) {
                     if (currentPrice >= targetPrice) {
                         processBuy(coin)
                                 .thenRun(() -> schedulerControlService.setIsProcessing(false));  // 🔹 비동기 완료 후 해제
@@ -128,8 +129,10 @@ public class TradingService {
                 }
 
                 // 손절
-                if (todayTradeCheck.equals("true") && currentPrice <= targetPrice * 0.95) {
-                    processExecute();
+                if (todayTradeCheck
+                        && currentPrice <= targetPrice * 0.95
+                        && !todayExecuted) {
+                    processExecute(coin);
                 } else {
                     schedulerControlService.setIsProcessing(false);
                 }
@@ -149,8 +152,8 @@ public class TradingService {
         List<CompletableFuture<Void>> futures = runningUser.stream() // 실행 중인 유저를 돌면서 매수 진행
                 .map(userId -> {
                     TradingStatus status = userStatusMap.get(userId);
-                    if (status.getOpMode().get() // 1일 후 거래
-                            && !status.getStopLossExecuted().get() // 금일 손절 로직 실행 여부
+                    if (!redisService.getTodayExecutedCheckMap().get(buyCoin) // 금일 손절 로직 실행 여부
+                            && status.getOpMode().get() // 1일 후 거래
                             && !status.getHold().get()) { // 매수 여부
                         User requestUser = getRequestUserByIdOrThrow(userAuthMap.get(userId));
                         return executeAsyncBuy(requestUser, status);
@@ -160,14 +163,15 @@ public class TradingService {
                 .filter(Objects::nonNull)
                 .toList();
 
-        redisService.setTodayTradeCheck(buyCoin, "true");
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenRun(() -> redisService.setTodayTrade(buyCoin, true));
     }
 
     /**
      * 비동기 처리로 Upbit 매수 API 요청 및 상태 변경
+     *
      * @param requestUser 요청 유저
-     * @param status   유저 거래 상태
+     * @param status      유저 거래 상태
      */
     private CompletableFuture<Void> executeAsyncBuy(User requestUser, TradingStatus status) {
         return CompletableFuture.supplyAsync(() -> {  // 🔹 'return' 추가
@@ -188,7 +192,6 @@ public class TradingService {
         for (String userId : runningUser) { // 실행중인 유저 확인
             TradingStatus status = userStatusMap.get(userId);
             if (status.getOpMode().get() // 동작 상태 확인
-                    && !status.getStopLossExecuted().get() // 손절 여부 확인
                     && status.getHold().get()) { // 매수 여부 확인
                 User requestUser = getRequestUserByIdOrThrow(userAuthMap.get(userId));
                 executeAsyncSell(requestUser, status);
@@ -199,15 +202,14 @@ public class TradingService {
     /**
      * 조건에 부합 시 손절 진행
      */
-    private void processExecute() {
+    private void processExecute(Coin coin) {
         log.info("====== 손절 로직 실행 중 ======");
 
         List<CompletableFuture<Void>> futures = runningUser.stream()
                 .map(userId -> {
                     TradingStatus status = userStatusMap.get(userId);
-                    if (status.getOpMode().get() && !status.getStopLossExecuted().get() && status.getHold().get()) {
+                    if (status.getOpMode().get() && status.getHold().get()) {
                         User requestUser = getRequestUserByIdOrThrow(userAuthMap.get(userId));
-                        status.getStopLossExecuted().set(true);
                         return executeAsyncSell(requestUser, status);
                     }
                     return null;
@@ -215,14 +217,16 @@ public class TradingService {
                 .filter(Objects::nonNull) // ✅ null을 제거하여 올바른 CompletableFuture 리스트 생성
                 .toList();
 
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenRun(() -> redisService.setTodayExecuted(coin, true));
     }
 
 
     /**
      * 비동기 처리로 Upbit 매도 API 요청 및 상태 변경
+     *
      * @param requestUser 로그인 유저
-     * @param status   거래 상태
+     * @param status      거래 상태
      */
     private CompletableFuture<Void> executeAsyncSell(User requestUser, TradingStatus status) {
         log.info("====== 매도 로직 실행 중 ======");
@@ -251,8 +255,9 @@ public class TradingService {
 
     /**
      * 매수 처리 이후 상태 변경 및 매수금액 확인
-     * @param result   거래 결과
-     * @param status   거래 상태
+     *
+     * @param result      거래 결과
+     * @param status      거래 상태
      * @param requestUser 로그인 유저
      */
     private void afterBuy(Object result, TradingStatus status, User requestUser) {
@@ -267,8 +272,9 @@ public class TradingService {
     /**
      * 매도 처리 후 상태 변경 및 수익률 확인
      * 주문 처리 완료 전 주문 API 요청 시 매도에 대한 주문이 없기에 매수 기준으로 수익률 기준
-     * @param result   거래 결과
-     * @param status   거래 상태
+     *
+     * @param result      거래 결과
+     * @param status      거래 상태
      * @param requestUser 로그인 유저
      */
     private void afterSell(Object result, TradingStatus status, User requestUser) {
@@ -290,7 +296,7 @@ public class TradingService {
 
         double buyPrice = executed_funds + paid_fee;
 
-        double currentPrice = redisService.getCurrentPrice().get(status.getSelectCoin());
+        double currentPrice = redisService.getCurrentPriceMap().get(status.getSelectCoin());
         double sellPrice = (executed_volume * currentPrice) * 0.9995;
 
         double ror = (sellPrice - buyPrice) / buyPrice * 100;

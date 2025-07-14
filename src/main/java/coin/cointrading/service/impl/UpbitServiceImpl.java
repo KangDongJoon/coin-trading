@@ -33,7 +33,7 @@ public class UpbitServiceImpl implements UpbitService {
     private final RestTemplate restTemplate;
 
     @Override
-    public Object getAccount(User requestUser) throws Exception {
+    public List<AccountResponse> getAccount(User requestUser) throws Exception {
         String accountUrl = serverUrl + "/v1/accounts";
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/json");
@@ -53,8 +53,7 @@ public class UpbitServiceImpl implements UpbitService {
     @Override
     public Object orderCoins(String decision, User requestUser, Coin selectCoin) throws Exception {
 
-        @SuppressWarnings("unchecked")
-        List<AccountResponse> account = (List<AccountResponse>) getAccount(requestUser);
+        List<AccountResponse> account = getAccount(requestUser);
         AccountResponse KRW = new AccountResponse();
         AccountResponse coinAccount = new AccountResponse();
         for (AccountResponse accountResponse : account) {
