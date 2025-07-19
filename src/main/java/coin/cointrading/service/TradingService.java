@@ -152,7 +152,8 @@ public class TradingService {
         List<CompletableFuture<Void>> futures = runningUser.stream() // 실행 중인 유저를 돌면서 매수 진행
                 .map(userId -> {
                     TradingStatus status = userStatusMap.get(userId);
-                    if (!redisService.getTodayExecutedCheckMap().get(buyCoin) // 금일 손절 로직 실행 여부
+                    if (status.getSelectCoin().equals(buyCoin) // 유저가 선택한 코인 인지
+                            && !redisService.getTodayExecutedCheckMap().get(buyCoin) // 금일 손절 로직 실행 여부
                             && status.getOpMode().get() // 1일 후 거래
                             && !status.getHold().get()) { // 매수 여부
                         User requestUser = getRequestUserByIdOrThrow(userAuthMap.get(userId));
