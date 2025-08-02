@@ -304,7 +304,7 @@ public class TradingService {
         double currentPrice = redisService.getCurrentPriceMap().get(status.getSelectCoin());
         double sellPrice = (executed_volume * currentPrice) * 0.9995;
 
-        double ror = (sellPrice - buyPrice) / buyPrice * 100;
+        double ror = (sellPrice - beforeMoney) / buyPrice * 100;
 
 
         tradeRepository.save(
