@@ -311,7 +311,7 @@ public class TradingService {
                 new TradeInfo(
                         requestUser,
                         LocalDate.now().minusDays(1),
-                        Coin.valueOf(tradeCoin),
+                        tradeCoin,
                         ror,
                         beforeMoney,
                         sellPrice)
@@ -349,5 +349,12 @@ public class TradingService {
             status.getHold().set(true);
             log.info("{}의 hold 변경완료: {}", userId, status.getHold().get());
         }
+    }
+
+    @Transactional
+    public void addLog(AuthUser authUser) {
+        User user = getRequestUserByIdOrThrow(authUser);
+        tradeRepository.save(new TradeInfo(user, LocalDate.now(), Coin.BTC.getKoreanName(), 0.022, 100000, 100000*1.022));
+        tradeRepository.save(new TradeInfo(user, LocalDate.now(), Coin.ETH.getKoreanName(), -0.032, 100000*1.022, 100000*1.022*0.968));
     }
 }

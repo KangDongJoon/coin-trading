@@ -1,10 +1,14 @@
 package coin.cointrading.service;
 
+import coin.cointrading.domain.AuthUser;
+import coin.cointrading.domain.TradeInfo;
 import coin.cointrading.domain.User;
 import coin.cointrading.dto.LoginRequest;
+import coin.cointrading.dto.TradeInfoResponse;
 import coin.cointrading.dto.UserSignupRequest;
 import coin.cointrading.exception.CustomException;
 import coin.cointrading.exception.ErrorCode;
+import coin.cointrading.repository.TradeRepository;
 import coin.cointrading.repository.UserRepository;
 import coin.cointrading.util.AES256Util;
 import coin.cointrading.util.JwtTokenProvider;
@@ -20,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Optional;
 
 @RequiredArgsConstructor
@@ -30,6 +35,7 @@ public class UserService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
+    private final TradeRepository tradeRepository;
     private final AES256Util aes256Util;
     private final RestTemplate restTemplate;
     private final RedisService redisService;
@@ -134,5 +140,23 @@ public class UserService {
                 .path("/")
                 .sameSite("Lax")
                 .build().toString();
+    }
+
+    public List<TradeInfoResponse> getMyPageData(AuthUser authUser) {
+        User user = getRequestUserByIdOrThrow(authUser);
+        return tradeRepository.findByUserUserId(user.getUserId())
+                .stream()
+                .map(tradeInfo -> new TradeInfoResponse(
+                        tradeInfo.getTradingDay().toString(),
+                        tradeInfo.getTradeCoin(),
+                        String.format("%.2f%%", tradeInfo.getReturnRate() * 100),
+                        (int)tradeInfo.getBeforeMoney(),
+                        (int)tradeInfo.getAfterMoney()
+                )).toList();
+    }
+
+    private User getRequestUserByIdOrThrow(AuthUser authUser) {
+        return userRepository.findByUserId(authUser.getUserId())
+                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_USER_NOT_FOUND));
     }
 }

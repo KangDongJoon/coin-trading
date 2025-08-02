@@ -1,11 +1,15 @@
 package coin.cointrading.controller;
 
 import coin.cointrading.domain.AuthUser;
+import coin.cointrading.domain.TradeInfo;
+import coin.cointrading.domain.User;
 import coin.cointrading.dto.LoginRequest;
+import coin.cointrading.dto.TradeInfoResponse;
 import coin.cointrading.dto.UserSignupRequest;
 import coin.cointrading.exception.CustomException;
 import coin.cointrading.exception.ErrorCode;
 import coin.cointrading.service.RedisService;
+import coin.cointrading.service.TradingService;
 import coin.cointrading.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,10 +20,9 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Controller
 @RequestMapping("/auth")
@@ -28,6 +31,7 @@ public class UserController {
 
     private final UserService userService;
     private final RedisService redisService;
+    private final TradingService tradingService;
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@ModelAttribute UserSignupRequest request) throws Exception {
@@ -111,5 +115,12 @@ public class UserController {
         } catch (CustomException e) {
             throw new CustomException(ErrorCode.AUTH_NO_AUTHORIZATION_USER);
         }
+    }
+
+    // 마이 페이지로 데이터 가져오기
+    @GetMapping("/myPageData")
+    @ResponseBody
+    public List<TradeInfoResponse> getMyPageData(@AuthenticationPrincipal AuthUser authUser) {
+        return userService.getMyPageData(authUser);
     }
 }

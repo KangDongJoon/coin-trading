@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.util.Date;
 
 @Entity
 @Getter
@@ -23,7 +22,7 @@ public class TradeInfo {
 
     private LocalDate tradingDay;
 
-    private Coin tradeCoin;
+    private String tradeCoin;
 
     private double returnRate;
 
@@ -31,7 +30,7 @@ public class TradeInfo {
 
     private double afterMoney;
 
-    public TradeInfo(User user, LocalDate tradingDay, Coin tradeCoin, double returnRate, double beforeMoney, double afterMoney) {
+    public TradeInfo(User user, LocalDate tradingDay, String tradeCoin, double returnRate, double beforeMoney, double afterMoney) {
         this.user = user;
         this.tradingDay = tradingDay;
         this.tradeCoin = tradeCoin;

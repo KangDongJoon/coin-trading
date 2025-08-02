@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>마이페이지</title>
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    table, th, td {
+      border: 1px solid black;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+    /* 로딩 중 메시지 스타일 */
+    #loading-row {
+      text-align: center;
+      font-weight: bold;
+      color: #555;
+    }
+    .error-message {
+      color: red;
+      text-align: center;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<table>
+  <thead>
+  <tr>
+    <th>날짜</th>
+    <th>거래종목</th>
+    <th>수익률</th>
+    <th>거래 전 자산</th>
+    <th>거래 후 자산</th>
+  </tr>
+  </thead>
+  <tbody id="table-body">
+  <tr id="loading-row">
+    <td colspan="5">📊 데이터를 불러오는 중...</td>
+  </tr>
+  </tbody>
+</table>
+
+<script>
+  const API_BASE_URL = window.location.origin.includes("localhost")
+          ? "http://localhost:8080"
+          : "http://43.201.244.141:8080";
+
+  const API_URL = `${API_BASE_URL}/auth/myPageData`;
+  let allData = [];
+
+  async function fetchData() {
+    const tableBody = document.getElementById("table-body");
+    tableBody.innerHTML = `<tr id="loading-row"><td colspan="5">📊 데이터를 불러오는 중...</td></tr>`;
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "GET",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        tableBody.innerHTML = `<tr><td colspan="5" class="error-message">❌ 데이터 로드 실패 (Status: ${response.status})</td></tr>`;
+        return;
+      }
+      allData = await response.json();
+      renderTable();
+    } catch (error) {
+      console.error("데이터 불러오기 실패:", error);
+      tableBody.innerHTML = `<tr><td colspan="5" class="error-message">❌ 데이터 로드 실패</td></tr>`;
+    }
+  }
+
+  function renderTable() {
+    const tableBody = document.getElementById("table-body");
+    tableBody.innerHTML = "";
+
+    const filteredData = allData
+            .sort((a, b) => new Date(b.day) - new Date(a.day));
+
+    filteredData.forEach(item => {
+      const row = document.createElement("tr");
+
+      row.innerHTML = `
+            <td>${item.tradingDay}</td>
+            <td>${item.tradeCoin}</td>
+            <td>${item.returnRate}</td>
+            <td>${item.beforeMoney}</td>
+            <td>${item.afterMoney}</td>
+        `;
+      tableBody.appendChild(row);
+    });
+  }
+
+  fetchData();
+  setInterval(fetchData, 600000);
+</script>
+
+</body>
+</html>
