@@ -66,6 +66,10 @@
         #logoutButton {
             background-color: #333333;
         }
+
+        #myPage {
+            background-color: rgba(217, 204, 21, 0.91);
+        }
     </style>
 </head>
 <body>
@@ -83,11 +87,16 @@
 <div class="btn-container">
     <button id="startButton" onclick="startProgram()">프로그램 동작</button>
     <button id="stopButton" onclick="stopProgram()">중단하기</button>
-    <button id="returnRateButton" class="button" type="button" onclick="goToReturnRate()">수익률 페이지로 이동</button>
+    <button id="myPage" onclick="goToMyPage()">마이페이지</button>
+    <button id="returnRateButton" class="button" type="button" onclick="goToReturnRate()">기간 수익률 확인</button>
     <button id="logoutButton" onclick="logout()">로그아웃</button>
 </div>
 
 <script>
+    function goToMyPage() {
+        window.location.href = "/auth/my-page"; // 마이 페이지로 이동
+    }
+
     function goToReturnRate() {
         window.location.href = "/auth/returnrate"; // 수익률 페이지로 이동
     }

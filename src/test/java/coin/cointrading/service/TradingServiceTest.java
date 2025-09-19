@@ -3,6 +3,7 @@ package coin.cointrading.service;
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.Coin;
 import coin.cointrading.dto.TradingStatus;
+import coin.cointrading.repository.TradeRepository;
 import coin.cointrading.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,8 @@ class TradingServiceTest {
     private ExecutorService executor;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private TradeRepository tradeRepository;
 
     TradingService tradingService;
 
@@ -62,7 +65,8 @@ class TradingServiceTest {
                 upbitService,
                 redisService,
                 executor,
-                userRepository
+                userRepository,
+                tradeRepository
         );
 
         authUser = new AuthUser("test", "nickName");

@@ -2,11 +2,13 @@ package coin.cointrading.service;
 
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.Coin;
+import coin.cointrading.domain.TradeInfo;
 import coin.cointrading.domain.User;
 import coin.cointrading.dto.OrderResponse;
 import coin.cointrading.dto.TradingStatus;
 import coin.cointrading.exception.CustomException;
 import coin.cointrading.exception.ErrorCode;
+import coin.cointrading.repository.TradeRepository;
 import coin.cointrading.repository.UserRepository;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -15,10 +17,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -38,6 +39,7 @@ public class TradingService {
     private final RedisService redisService;
     private final ExecutorService executor;
     private final UserRepository userRepository;
+    private final TradeRepository tradeRepository;
 
     /**
      * 프로그램 실행
@@ -290,17 +292,30 @@ public class TradingService {
                 .findFirst()
                 .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND, "매수"));
 
+        String tradeCoin = order.get("market").toString().substring(order.get("market").toString().indexOf('-') + 1);
 
         double paid_fee = Double.parseDouble((String) order.get(("paid_fee")));
         double executed_funds = Double.parseDouble((String) order.get(("executed_funds")));
         double executed_volume = Double.parseDouble((String) order.get("executed_volume"));
 
         double buyPrice = executed_funds + paid_fee;
+        double beforeMoney = (buyPrice * executed_volume) * 1.0005;
 
         double currentPrice = redisService.getCurrentPriceMap().get(status.getSelectCoin());
         double sellPrice = (executed_volume * currentPrice) * 0.9995;
 
-        double ror = (sellPrice - buyPrice) / buyPrice * 100;
+        double ror = (sellPrice - beforeMoney) / buyPrice * 100;
+
+
+        tradeRepository.save(
+                new TradeInfo(
+                        requestUser,
+                        LocalDate.now().minusDays(1),
+                        tradeCoin,
+                        ror,
+                        beforeMoney,
+                        sellPrice)
+        );
 
         log.info("{}의 매도 수익률: {}", requestUser.getUserId(), String.format("%.1f%%", ror));
     }
@@ -334,5 +349,12 @@ public class TradingService {
             status.getHold().set(true);
             log.info("{}의 hold 변경완료: {}", userId, status.getHold().get());
         }
+    }
+
+    @Transactional
+    public void addLog(AuthUser authUser) {
+        User user = getRequestUserByIdOrThrow(authUser);
+        tradeRepository.save(new TradeInfo(user, LocalDate.now(), Coin.BTC.getKoreanName(), 0.022, 100000, 100000*1.022));
+        tradeRepository.save(new TradeInfo(user, LocalDate.now(), Coin.ETH.getKoreanName(), -0.032, 100000*1.022, 100000*1.022*0.968));
     }
 }

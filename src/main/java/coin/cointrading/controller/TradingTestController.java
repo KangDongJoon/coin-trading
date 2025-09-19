@@ -45,6 +45,11 @@ public class TradingTestController {
         log.info("-----hold 변경완료-----");
     }
 
+    @PostMapping("/test/add-log")
+    public void addLog(@AuthenticationPrincipal AuthUser authUser) {
+        tradingService.addLog(authUser);
+    }
+
     /**
      * 계좌 확인
      */

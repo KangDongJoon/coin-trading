@@ -47,4 +47,10 @@ public class PageController {
         return "guide";
     }
 
+    // 마이 페이지로 이동
+    @GetMapping("/auth/my-page")
+    public String showMyPage(@AuthenticationPrincipal AuthUser authUser) {
+        return "myPage";
+    }
+
 }
