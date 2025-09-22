@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/").permitAll() // ✅ 메인 페이지는 인증 없이 접근 가능
                         .requestMatchers("/auth/**", "/error", "/test/**", "/images/**").permitAll() // 로그인/회원가입 허용
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated() // 그 외의 모든 요청은 인증 필요
                 )
                 .build();

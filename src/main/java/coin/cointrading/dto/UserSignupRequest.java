@@ -16,5 +16,6 @@ public class UserSignupRequest {
     private String userNickname;
     private String secretKey;
     private String accessKey;
+    private String role;
 
 }

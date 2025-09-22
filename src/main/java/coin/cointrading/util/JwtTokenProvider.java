@@ -1,5 +1,6 @@
 package coin.cointrading.util;
 
+import coin.cointrading.domain.Role;
 import coin.cointrading.domain.User;
 import coin.cointrading.exception.CustomException;
 import coin.cointrading.exception.ErrorCode;
@@ -37,7 +38,7 @@ public class JwtTokenProvider {
                 .sign(algorithm); // 서명
     }
 
-    public String createAccessToken(String userId, String userNickname) {
+    public String createAccessToken(String userId, String userNickname, Role role) {
         Algorithm algorithm = Algorithm.HMAC256(jwtSecretKey);  // 비밀 키로 서명
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"));
         Date date = calendar.getTime(); // KST 기준으로 발급 시각 설정
@@ -45,6 +46,7 @@ public class JwtTokenProvider {
         return JWT.create()
                 .withSubject(userId)
                 .withClaim("userNickname", userNickname)
+                .withClaim("role", role.name())
                 .withIssuedAt(date)  // 발급일
                 .withExpiresAt(new Date(date.getTime() + 1800000))  // 만료일: 30분
                 .sign(algorithm);
@@ -111,41 +113,6 @@ public class JwtTokenProvider {
             throw new CustomException(ErrorCode.AUTH_NO_AUTHORIZATION_USER);
         }
     }
-
-
-//    public DecodedJWT extractClaims(String token) {
-//        try {
-//            if (token == null || token.isBlank()) {
-//                throw new CustomException(ErrorCode.AUTH_NO_AUTHORIZATION_USER);
-//            }
-//
-//            // "Bearer " 접두어가 있으면 제거
-//            String jwt = token.startsWith("Bearer ") ? token.substring(7) : token;
-//
-//            Algorithm algorithm = Algorithm.HMAC256(jwtSecretKey);
-//            JWTVerifier verifier = JWT.require(algorithm).build();
-//
-//            DecodedJWT decodedJWT = JWT.decode(jwt);
-//            String userId = decodedJWT.getSubject();
-//            Date expiresAt = decodedJWT.getExpiresAt();
-//
-//            // accessToken 만료 확인 후 refreshToken 확인
-//            if (expiresAt.before(new Date())) {
-//                String refreshToken = redisService.getRefreshToken(userId);
-//                if (refreshToken != null) {
-//                    String userNickname = decodedJWT.getClaim("userNickname").asString();
-//                    String newAccessToken = createAccessToken(
-//                            userId,
-//                            userNickname
-//                    );
-//                    return verifier.verify(newAccessToken);
-//                }
-//            }
-//            return verifier.verify(jwt);
-//        } catch (JWTVerificationException exception) {
-//            throw new CustomException(ErrorCode.AUTH_NO_AUTHORIZATION_USER);
-//        }
-//    }
 
     private static String getJwtToken(String queryString, String secretKey, String accessKey) throws NoSuchAlgorithmException {
         MessageDigest md = MessageDigest.getInstance("SHA-512");

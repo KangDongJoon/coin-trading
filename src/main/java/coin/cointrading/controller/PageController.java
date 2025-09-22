@@ -53,4 +53,8 @@ public class PageController {
         return "myPage";
     }
 
+    // 관리자 페이지로 이동
+    @GetMapping("/admin")
+    public String showAdminPage(@AuthenticationPrincipal AuthUser authUser) {
+        return "adminPage";}
 }

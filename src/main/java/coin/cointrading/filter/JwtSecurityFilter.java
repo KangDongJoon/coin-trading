@@ -1,6 +1,7 @@
 package coin.cointrading.filter;
 
 import coin.cointrading.domain.AuthUser;
+import coin.cointrading.domain.Role;
 import coin.cointrading.util.JwtAuthenticationToken;
 import coin.cointrading.util.JwtTokenProvider;
 import com.auth0.jwt.interfaces.DecodedJWT;
@@ -53,8 +54,8 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
 
                 if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     String userNickname = decodedJWT.getClaim("userNickname").asString();
-
-                    AuthUser authUser = new AuthUser(userId, userNickname);
+                    String role = decodedJWT.getClaim("role").asString();
+                    AuthUser authUser = new AuthUser(userId, userNickname, Role.of(role));
 
                     JwtAuthenticationToken authenticationToken = new JwtAuthenticationToken(authUser);
                     authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(httpRequest));
