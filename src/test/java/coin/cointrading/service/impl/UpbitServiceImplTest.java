@@ -24,6 +24,7 @@ import java.util.Map;
 
 import static coin.cointrading.domain.Coin.BTC;
 import static coin.cointrading.domain.Coin.ETH;
+import static coin.cointrading.domain.Role.USER;
 import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
@@ -48,7 +49,7 @@ class UpbitServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        requestUser = new User("test1", "password", "nickName", "secretKey", "accessKey");
+        requestUser = new User("test1", "password", "nickName", "secretKey", "accessKey", USER);
 
         accountList = new ArrayList<>();
         AccountResponse accountResponse_KRW = new AccountResponse("KRW", "1000000.0", "0.0", "0", false, "KRW");

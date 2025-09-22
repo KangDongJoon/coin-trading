@@ -2,6 +2,7 @@ package coin.cointrading.controller;
 
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.dto.SelectCoin;
+import coin.cointrading.dto.TradingStatus;
 import coin.cointrading.service.TradingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,12 +55,20 @@ public class TradingController {
      */
     @GetMapping("/v1/status")
     public ResponseEntity<Map<String, String>> checkStatus(@AuthenticationPrincipal AuthUser authUser) {
-        // 사용자 상태 반환
         Map<String, String> response = new HashMap<>();
         response.put("isRunning", tradingService.checkStatus(authUser));
-        response.put("selectedCoin", tradingService.getUserStatusMap().get(authUser.getUserId()).getSelectCoin().name());
+
+        TradingStatus status = tradingService.getUserStatusMap().get(authUser.getUserId());
+        if (status != null && status.getSelectCoin() != null) {
+            response.put("selectedCoin", status.getSelectCoin().name());
+        } else {
+            response.put("selectedCoin", "");
+        }
+
+        response.put("role", authUser.getRole().name());
         return ResponseEntity.ok(response);
     }
+
 }
 
 

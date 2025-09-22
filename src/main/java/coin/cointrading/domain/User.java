@@ -21,16 +21,26 @@ public class User {
 
     private String userNickname;
 
+    @Column(nullable = false)
     private String upbitSecretKey;
 
+    @Column(nullable = false)
     private String upbitAccessKey;
 
-    public User(String userId, String password, String userNickname, String upbitSecretKey, String upbitAccessKey) {
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
+
+    public User(String userId, String password, String userNickname, String upbitSecretKey, String upbitAccessKey, Role role) {
         this.userId = userId;
         this.password = password;
         this.userNickname = userNickname;
         this.upbitSecretKey = upbitSecretKey;
         this.upbitAccessKey = upbitAccessKey;
+        this.role = role;
     }
 
+    public void changeRole(Role newRole) {
+        this.role = newRole;
+    }
 }

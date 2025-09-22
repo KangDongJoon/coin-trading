@@ -16,6 +16,7 @@ public enum ErrorCode {
     TRADING_ALREADY_GENERATE(HttpStatus.CONFLICT, "이미 프로그램이 동작중입니다."),
     TRADING_NOT_FOUND(HttpStatus.NOT_FOUND, "실행중인 프로그램이 없습니다."),
 
+    AUTH_BAD_REQUEST_ROLE(HttpStatus.BAD_REQUEST, "존재하지않는 권한입니다."),
     AUTH_NO_AUTHORIZATION_USER(HttpStatus.UNAUTHORIZED, "비인가 접속입니다."),
     AUTH_PASSWORD_BAD_REQUEST(HttpStatus.BAD_REQUEST, "비밀번호가 틀렸습니다."),
     AUTH_EXIST_ID(HttpStatus.CONFLICT, "이미 가입된 ID입니다."),

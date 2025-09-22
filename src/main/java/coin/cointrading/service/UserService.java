@@ -1,7 +1,7 @@
 package coin.cointrading.service;
 
 import coin.cointrading.domain.AuthUser;
-import coin.cointrading.domain.TradeInfo;
+import coin.cointrading.domain.Role;
 import coin.cointrading.domain.User;
 import coin.cointrading.dto.LoginRequest;
 import coin.cointrading.dto.TradeInfoResponse;
@@ -67,7 +67,8 @@ public class UserService {
                 encodePassword,
                 request.getUserNickname(),
                 encodeSecret,
-                encodeAccess
+                encodeAccess,
+                Role.USER
         ));
     }
 
@@ -90,7 +91,8 @@ public class UserService {
 
         return jwtTokenProvider.createAccessToken(
                 user.getUserId(),
-                user.getUserNickname()
+                user.getUserNickname(),
+                user.getRole()
         );
     }
 
@@ -132,7 +134,8 @@ public class UserService {
 
         // 4) 새로운 Access Token 생성
         String userNickname = decodedRefreshToken.getClaim("userNickname").asString();
-        String newAccessToken = jwtTokenProvider.createAccessToken(userId, userNickname);
+        Role role = Role.of(decodedRefreshToken.getClaim("role").asString());
+        String newAccessToken = jwtTokenProvider.createAccessToken(userId, userNickname, role);
 
         return ResponseCookie.from("Authorization", newAccessToken)
                 .httpOnly(true)
