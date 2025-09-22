@@ -70,6 +70,10 @@
         #myPage {
             background-color: rgba(217, 204, 21, 0.91);
         }
+
+        #adminPageButton {
+            background-color: rgba(272, 224, 221, 0.91);
+        }
     </style>
 </head>
 <body>
@@ -89,6 +93,7 @@
     <button id="stopButton" onclick="stopProgram()">중단하기</button>
     <button id="myPage" onclick="goToMyPage()">마이페이지</button>
     <button id="returnRateButton" class="button" type="button" onclick="goToReturnRate()">기간 수익률 확인</button>
+    <button id="adminPageButton" class="button" style="display:none;" onclick="goToAdminPage()">관리자 페이지</button>
     <button id="logoutButton" onclick="logout()">로그아웃</button>
 </div>
 
@@ -101,41 +106,47 @@
         window.location.href = "/auth/returnrate"; // 수익률 페이지로 이동
     }
 
-    // 페이지 로드 시 서버에서 실행 상태를 확인하여 버튼 상태 설정
+    function goToAdminPage() {
+        window.location.href = "/admin"; // 관리자 페이지 URL
+    }
+
+    // 페이지 로드 시 실행 상태 + 권한 체크
     window.onload = function () {
         const startButton = document.getElementById("startButton");
         const stopButton = document.getElementById("stopButton");
+        const adminButton = document.getElementById("adminPageButton");
 
-        // 서버에서 실행 상태를 가져옴
-        fetchWithToken('/v1/status')  // 사용자 ID를 함께 보내서 확인하도록 해야 할 수도 있음.
+        // 서버에서 실행 상태 및 권한 확인
+        fetchWithToken('/v1/status')
             .then(response => response.json())
             .then(data => {
                 const isRunning = data.isRunning;
                 const selectedCoin = data.selectedCoin;
-
+                const userRole = data.role; // 서버에서 현재 유저 권한 전달
+                console.log("전체 데이터:", data);
+                console.log("현재 유저 권한:", userRole);
+                // 코인 선택 유지
                 if (selectedCoin) {
                     const radioToCheck = document.querySelector(`input[name="coin"][value="${selectedCoin}"]`);
-                    if (radioToCheck) {
-                        radioToCheck.checked = true;
-                    }
+                    if (radioToCheck) radioToCheck.checked = true;
                 }
 
                 // 실행 중인 경우 버튼 상태 업데이트
                 if (isRunning === "true") {
-                    startButton.textContent = "동작 중..."; // 버튼 텍스트 변경
-                    startButton.disabled = true; // 시작 버튼 비활성화
-                    stopButton.style.display = "block"; // 중단하기 버튼 표시
-                    // 실행 중이면 코인 선택 비활성화
-                    document.querySelectorAll('input[name="coin"]').forEach(radio => {
-                        radio.disabled = true;
-                    });
+                    startButton.textContent = "동작 중...";
+                    startButton.disabled = true;
+                    stopButton.style.display = "block";
+                    document.querySelectorAll('input[name="coin"]').forEach(radio => radio.disabled = true);
                 } else {
-                    stopButton.style.display = "none"; // 중단하기 버튼 숨김
+                    stopButton.style.display = "none";
+                }
+
+                // 관리자 권한이면 버튼 노출
+                if (userRole === "ADMIN") {
+                    adminButton.style.display = "block";
                 }
             })
-            .catch(error => {
-                console.error("상태 확인 오류:", error);
-            });
+            .catch(error => console.error("상태 확인 오류:", error));
     };
 
     function startProgram() {

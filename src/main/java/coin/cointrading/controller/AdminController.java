@@ -42,7 +42,8 @@ public class AdminController {
 
 
     @PatchMapping("/users/{id}/role")
-    public void updateUserRole(@PathVariable Long id, @RequestParam Role role) {
+    public String updateUserRole(@PathVariable Long id, @RequestParam Role role) {
         adminService.changeRole(id, role);
+        return "redirect:/admin/users"; // 변경 후 유저 리스트로 이동
     }
 }

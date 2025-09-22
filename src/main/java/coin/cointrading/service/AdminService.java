@@ -1,6 +1,5 @@
 package coin.cointrading.service;
 
-import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.Role;
 import coin.cointrading.domain.User;
 import coin.cointrading.exception.CustomException;
@@ -19,7 +18,7 @@ public class AdminService {
 
     @Transactional
     public void changeRole(Long userId, Role newRole) {
-        User user = userRepository.findByUserId(Long.toString(userId))
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.AUTH_USER_NOT_FOUND));
 
         user.changeRole(newRole);

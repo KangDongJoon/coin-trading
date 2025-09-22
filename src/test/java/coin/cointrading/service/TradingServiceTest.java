@@ -2,6 +2,7 @@ package coin.cointrading.service;
 
 import coin.cointrading.domain.AuthUser;
 import coin.cointrading.domain.Coin;
+import coin.cointrading.domain.Role;
 import coin.cointrading.dto.TradingStatus;
 import coin.cointrading.repository.TradeRepository;
 import coin.cointrading.repository.UserRepository;
@@ -69,7 +70,7 @@ class TradingServiceTest {
                 tradeRepository
         );
 
-        authUser = new AuthUser("test", "nickName");
+        authUser = new AuthUser("test", "nickName", Role.USER);
         strCoin = "BTC";
         coin = Coin.valueOf(strCoin);
     }
