@@ -77,12 +77,12 @@ jobs:
             echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
             echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
 
-            # 최신 Docker 이미지 풀
+          # 최신 Docker 이미지 풀
             docker stop cointrading || true
             docker rm -f cointrading || true
             docker rmi -f ${{ secrets.DOCKER_USERNAME }}/cointrading:latest || true
             docker pull ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
-
-            # Docker Compose 실행 (자동으로 .env 파일 로드)
-            docker-compose down
-            docker-compose up -d
+            
+            # Docker Compose 실행
+            docker compose down
+            docker compose up -d
