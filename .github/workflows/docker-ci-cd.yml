@@ -84,5 +84,5 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/cointrading:latest
             
             # docker-compose 실행
-            docker compose down
-            docker compose up -d
+            docker-compose down
+            docker-compose up -d
