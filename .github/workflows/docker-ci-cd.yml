@@ -62,26 +62,26 @@ jobs:
 
       - name: Deploy with Docker Compose
         run: |
-          ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EOF'
-            set -e
-            cd /home/ubuntu
-
-            # .env 파일 업데이트
-            cat > .env <<EOT
-            REDIS_HOST=redis
-            DB_URL=jdbc:mysql://mysql:3306/cointrading
-            DB_USERNAME=${DB_USERNAME}
-            DB_PASSWORD=${DB_PASSWORD}
-            AES_SECRET_KEY=${AES_SECRET_KEY}
-            JWT_SECRET_KEY=${JWT_SECRET_KEY}
-            ROOT_PASSWORD=${ROOT_PASSWORD}
-            DOCKER_USERNAME=${DOCKER_USERNAME}
-            REDIS_PASSWORD=${REDIS_PASSWORD}
-            EOT
-
-            # 최신 이미지 가져오기
-            docker compose pull
-
-            # 컨테이너 재시작
-            docker compose up -d --remove-orphans
-          EOF
+          ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << EOF
+      set -e
+      cd /home/ubuntu
+      
+      # .env 파일 업데이트
+      cat > .env <<EOT
+      REDIS_HOST=redis
+      DB_URL=jdbc:mysql://mysql:3306/cointrading
+      DB_USERNAME=${DB_USERNAME}
+      DB_PASSWORD=${DB_PASSWORD}
+      AES_SECRET_KEY=${AES_SECRET_KEY}
+      JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      ROOT_PASSWORD=${ROOT_PASSWORD}
+      DOCKER_USERNAME=${DOCKER_USERNAME}
+      REDIS_PASSWORD=${REDIS_PASSWORD}
+      EOT
+      
+      # 최신 이미지 가져오기
+      docker compose pull
+      
+      # 컨테이너 재시작
+      docker compose up -d --remove-orphans
+      EOF
