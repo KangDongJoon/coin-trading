@@ -41,6 +41,8 @@ services:
   cointrading:
     image: ${DOCKER_USERNAME}/cointrading:latest
     container_name: cointrading
+    environment:
+      - TZ=Asia/Seoul
     ports:
       - "8080:8080"
     env_file:
